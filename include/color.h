@@ -15,7 +15,7 @@ typedef struct BGRA8888 {
 #define ColorGetB(color) color.b
 #define ColorGetA(color) color.a
 
-#define ColorFromComponents(r, g, b, a) (Color){ b, g, r, a }
+#define ColorConstructRGBA(r, g, b, a) (Color){ b, g, r, a }
 
 #define RED     (Color){ 0x00, 0x00, 0xFF, 0xFF }
 #define GREEN   (Color){ 0x00, 0xFF, 0x00, 0xFF }
