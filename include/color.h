@@ -35,7 +35,7 @@ typedef struct PixelFormat {
     uint8_t aLoss;
 } PixelFormat;
 
-inline static const PixelFormat FORMAT_RGBA8888 = {
+static const PixelFormat FORMAT_RGBA8888 = {
     .rMask = 0xFF000000,
     .gMask = 0x00FF0000,
     .bMask = 0x0000FF00,
@@ -52,7 +52,7 @@ inline static const PixelFormat FORMAT_RGBA8888 = {
     .aLoss = 0,
 };
 
-inline static const PixelFormat FORMAT_ABGR8888 = {
+static const PixelFormat FORMAT_ABGR8888 = {
     .rMask = 0x000000FF,
     .gMask = 0x0000FF00,
     .bMask = 0x00FF0000,
@@ -69,7 +69,7 @@ inline static const PixelFormat FORMAT_ABGR8888 = {
     .aLoss = 0,
 };
 
-inline static const PixelFormat FORMAT_ARGB8888 = {
+static const PixelFormat FORMAT_ARGB8888 = {
     .rMask = 0x00FF0000,
     .gMask = 0x0000FF00,
     .bMask = 0x000000FF,
@@ -86,7 +86,7 @@ inline static const PixelFormat FORMAT_ARGB8888 = {
     .aLoss = 0,
 };
 
-inline static const PixelFormat FORMAT_BGRA8888 = {
+static const PixelFormat FORMAT_BGRA8888 = {
     .rMask = 0x0000FF00,
     .gMask = 0x00FF0000,
     .bMask = 0xFF000000,
@@ -103,7 +103,7 @@ inline static const PixelFormat FORMAT_BGRA8888 = {
     .aLoss = 0,
 };
 
-inline static const PixelFormat FORMAT_RGB565 = {
+static const PixelFormat FORMAT_RGB565 = {
     .rMask = 0xF800,
     .gMask = 0x07E0,
     .bMask = 0x001F,
@@ -120,7 +120,7 @@ inline static const PixelFormat FORMAT_RGB565 = {
     .aLoss = 8,
 };
 
-inline static const PixelFormat FORMAT_BGR565 = {
+static const PixelFormat FORMAT_BGR565 = {
     .rMask = 0x001F,
     .gMask = 0x07E0,
     .bMask = 0xF800,
@@ -136,3 +136,6 @@ inline static const PixelFormat FORMAT_BGR565 = {
     .bLoss = 3,
     .aLoss = 8,
 };
+
+uint32_t ColorToPixel(const PixelFormat* format, Color color);
+Color PixelToColor(const PixelFormat* format, uint32_t pixel);
