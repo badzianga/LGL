@@ -16,7 +16,7 @@ Surface ImageLoad(const char* path) {
         sizeof(Color));
     const Color* end = &surface.pixels[surface.width * surface.height];
     for (Color* pixel = surface.pixels; pixel != end; ++pixel) {
-        Color new = ColorConstructRGBA(pixel->b, pixel->g, pixel->r, pixel->a);
+        Color new = { pixel->b, pixel->g, pixel->r, pixel->a };
         *pixel = new;
     }
 
@@ -26,7 +26,7 @@ Surface ImageLoad(const char* path) {
 void ImageSave(Surface image, const char* path) {
     const Color* end = &image.pixels[image.width * image.height];
     for (Color* pixel = image.pixels; pixel != end; ++pixel) {
-        Color new = ColorConstructRGBA(pixel->b, pixel->g, pixel->r, pixel->a);
+        Color new = { pixel->b, pixel->g, pixel->r, pixel->a };
         *pixel = new;
     }
 
