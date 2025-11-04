@@ -9,6 +9,9 @@ OUT_BASE=$(BUILD_DIR)/out
 SRCS=$(wildcard $(SRC_DIR)/*.c)
 LIB_NAME=libLGL.a
 
+PLATFORM_SRC=$(SRC_DIR)/platform/platform_linux.c
+SRCS+=$(PLATFORM_SRC)
+
 all: debug release
 
 debug:
@@ -18,7 +21,7 @@ release:
 	@$(MAKE) --no-print-directory MODE=release CFLAGS="-Wall -Wextra -O2 -flto" BUILD_TYPE=RELEASE prepare build
 
 prepare:
-	mkdir -p $(OUT_BASE)/$(MODE)
+	mkdir -p $(OUT_BASE)/$(MODE)/platform
 
 build:
 	$(MAKE) OUT_SUBDIR=$(OUT_BASE)/$(MODE) LIB_TARGET=$(OUT_BASE)/$(MODE)/$(LIB_NAME) do_build
