@@ -69,6 +69,40 @@ inline static const PixelFormat FORMAT_ABGR8888 = {
     .aLoss = 0,
 };
 
+inline static const PixelFormat FORMAT_ARGB8888 = {
+    .rMask = 0x00FF0000,
+    .gMask = 0x0000FF00,
+    .bMask = 0x000000FF,
+    .aMask = 0xFF000000,
+
+    .rShift = 16,
+    .gShift = 8,
+    .bShift = 0,
+    .aShift = 24,
+
+    .rLoss = 0,
+    .gLoss = 0,
+    .bLoss = 0,
+    .aLoss = 0,
+};
+
+inline static const PixelFormat FORMAT_BGRA8888 = {
+    .rMask = 0x0000FF00,
+    .gMask = 0x00FF0000,
+    .bMask = 0xFF000000,
+    .aMask = 0x000000FF,
+
+    .rShift = 8,
+    .gShift = 16,
+    .bShift = 24,
+    .aShift = 0,
+
+    .rLoss = 0,
+    .gLoss = 0,
+    .bLoss = 0,
+    .aLoss = 0,
+};
+
 inline static const PixelFormat FORMAT_RGB565 = {
     .rMask = 0xF800,
     .gMask = 0x07E0,
@@ -78,6 +112,23 @@ inline static const PixelFormat FORMAT_RGB565 = {
     .rShift = 11,
     .gShift = 5,
     .bShift = 0,
+    .aShift = 0,
+
+    .rLoss = 3,
+    .gLoss = 2,
+    .bLoss = 3,
+    .aLoss = 8,
+};
+
+inline static const PixelFormat FORMAT_BGR565 = {
+    .rMask = 0x001F,
+    .gMask = 0x07E0,
+    .bMask = 0xF800,
+    .aMask = 0x0000,
+
+    .rShift = 0,
+    .gShift = 5,
+    .bShift = 11,
     .aShift = 0,
 
     .rLoss = 3,
