@@ -5,7 +5,7 @@
 #include "Color.h"
 
 Surface SurfaceCreate(int width, int height, const PixelFormat* format) {
-    if (width <= 0 || height <= 0) {
+    if (width <= 0 || height <= 0 || format == NULL) {
         return (Surface){ 0 };
     }
 
@@ -14,21 +14,18 @@ Surface SurfaceCreate(int width, int height, const PixelFormat* format) {
         return (Surface){ 0 };
     }
 
-    return (Surface){ pixels, width, height, width, format };
+    return (Surface){ pixels, width, height, format };
 }
 
-Surface SurfaceCreateFromBuffer(int width, int height, void* buffer, const PixelFormat* format) {
-    return (Surface){ buffer, width, height, width, format };
+void SurfaceDestroy(Surface* surface) {
+    free(surface->pixels);
+    *surface = (Surface){ 0 };
 }
 
 Surface SurfaceCopy(Surface src) {
     Surface copy = SurfaceCreate(src.width, src.height, src.format);
     memcpy(copy.pixels, src.pixels, sizeof(src.format->bytesPerPixel) * src.width * src.height);
     return copy;
-}
-
-void SurfaceDestroy(Surface surface) {
-    free(surface.pixels);
 }
 
 Surface SurfaceConvert(Surface surface, const PixelFormat* format) {
@@ -40,7 +37,7 @@ Surface SurfaceConvert(Surface surface, const PixelFormat* format) {
 
     for (int y = 0; y < surface.height; ++y) {
         for (int x = 0; x < surface.width; ++x) {
-            uint32_t* pixel = &((uint32_t*)surface.pixels)[y * surface.stride + x];  // * surface.format.bytesPerPixel
+            uint32_t* pixel = &((uint32_t*)surface.pixels)[y * surface.width + x];  // * surface.format.bytesPerPixel
             Color color = PixelToColor(surface.format, *pixel);
             uint32_t newPixel = ColorToPixel(format, color);
             *pixel = newPixel;
@@ -53,7 +50,7 @@ Surface SurfaceConvert(Surface surface, const PixelFormat* format) {
 static void Fill2(Surface surface, uint16_t color) {
     for (int y = 0; y < surface.height; ++y) {
         for (int x = 0; x < surface.width; ++x) {
-            uint16_t* pixel = &((uint16_t*)surface.pixels)[y * surface.stride + x];
+            uint16_t* pixel = &((uint16_t*)surface.pixels)[y * surface.width + x];
             *pixel = color;
         }
     }
@@ -62,7 +59,7 @@ static void Fill2(Surface surface, uint16_t color) {
 static void Fill4(Surface surface, uint32_t color) {
     for (int y = 0; y < surface.height; ++y) {
         for (int x = 0; x < surface.width; ++x) {
-            uint32_t* pixel = &((uint32_t*)surface.pixels)[y * surface.stride + x];
+            uint32_t* pixel = &((uint32_t*)surface.pixels)[y * surface.width + x];
             *pixel = color;
         }
     }

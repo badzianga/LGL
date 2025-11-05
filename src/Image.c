@@ -17,7 +17,6 @@ Surface ImageLoad(const char* path) {
         sizeof(Color));
 
     surface.format = &FORMAT_RGBA8888;
-    surface.stride = surface.width;
 
     return surface;
 }
