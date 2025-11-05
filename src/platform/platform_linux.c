@@ -1,4 +1,5 @@
 #include <X11/Xlib.h>
+#include "color.h"
 #include "window.h"
 
 typedef struct platform_t {
@@ -17,7 +18,7 @@ static Platform platform = { 0 };
 Surface WindowInit(int width, int height, const char* title) {
     platform.display = XOpenDisplay(NULL);
     if (platform.display == NULL) {
-        return (Surface){ NULL, 0, 0 };
+        return (Surface){ 0 };
     }
     platform.screen = XDefaultScreen(platform.display);
 
@@ -34,7 +35,7 @@ Surface WindowInit(int width, int height, const char* title) {
     const long mask = ExposureMask;
     XSelectInput(platform.display, platform.window, mask);
 
-    platform.surface = SurfaceCreate(width, height);
+    platform.surface = SurfaceCreate(width, height, &FORMAT_ARGB8888);
     WindowSetTitle(title);
 
     platform.wmDeleteWindow = XInternAtom(platform.display, "WM_DELETE_WINDOW", False);
@@ -46,10 +47,10 @@ Surface WindowInit(int width, int height, const char* title) {
         XDefaultDepth(platform.display, platform.screen),
         ZPixmap,
         0,
-        (char*)platform.surface.pixels,
+        platform.surface.pixels,
         width,
         height,
-        32,
+        platform.surface.format->bytesPerPixel * 8,
         0
     );
     platform.gc = XCreateGC(platform.display, platform.window, 0, NULL);
