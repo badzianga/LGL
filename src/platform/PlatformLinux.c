@@ -1,5 +1,4 @@
 #include <X11/Xlib.h>
-#include "Color.h"
 #include "Window.h"
 
 typedef struct platform_t {
