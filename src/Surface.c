@@ -24,7 +24,7 @@ void SurfaceDestroy(Surface* surface) {
 
 Surface SurfaceCopy(Surface src) {
     Surface copy = SurfaceCreate(src.width, src.height, src.format);
-    memcpy(copy.pixels, src.pixels, sizeof(src.format->bytesPerPixel) * src.width * src.height);
+    memcpy(copy.pixels, src.pixels, src.format->bytesPerPixel * src.width * src.height);
     return copy;
 }
 
