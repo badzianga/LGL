@@ -33,6 +33,8 @@ typedef struct PixelFormat {
     uint8_t gLoss;
     uint8_t bLoss;
     uint8_t aLoss;
+
+    uint8_t bytesPerPixel;
 } PixelFormat;
 
 static const PixelFormat FORMAT_RGBA8888 = {
@@ -50,6 +52,8 @@ static const PixelFormat FORMAT_RGBA8888 = {
     .gLoss = 0,
     .bLoss = 0,
     .aLoss = 0,
+
+    .bytesPerPixel = 4,
 };
 
 static const PixelFormat FORMAT_ABGR8888 = {
@@ -67,6 +71,8 @@ static const PixelFormat FORMAT_ABGR8888 = {
     .gLoss = 0,
     .bLoss = 0,
     .aLoss = 0,
+
+    .bytesPerPixel = 4,
 };
 
 static const PixelFormat FORMAT_ARGB8888 = {
@@ -84,6 +90,8 @@ static const PixelFormat FORMAT_ARGB8888 = {
     .gLoss = 0,
     .bLoss = 0,
     .aLoss = 0,
+    
+    .bytesPerPixel = 4,
 };
 
 static const PixelFormat FORMAT_BGRA8888 = {
@@ -101,6 +109,8 @@ static const PixelFormat FORMAT_BGRA8888 = {
     .gLoss = 0,
     .bLoss = 0,
     .aLoss = 0,
+
+    .bytesPerPixel = 4,
 };
 
 static const PixelFormat FORMAT_RGB565 = {
@@ -118,6 +128,8 @@ static const PixelFormat FORMAT_RGB565 = {
     .gLoss = 2,
     .bLoss = 3,
     .aLoss = 8,
+
+    .bytesPerPixel = 2,
 };
 
 static const PixelFormat FORMAT_BGR565 = {
@@ -135,6 +147,8 @@ static const PixelFormat FORMAT_BGR565 = {
     .gLoss = 2,
     .bLoss = 3,
     .aLoss = 8,
+
+    .bytesPerPixel = 2,
 };
 
 uint32_t ColorToPixel(const PixelFormat* format, Color color);
