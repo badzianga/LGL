@@ -1,4 +1,4 @@
-#include "color.h"
+#include "Color.h"
 
 uint32_t ColorToPixel(const PixelFormat* format, Color color) {
     uint32_t r = (color.r >> format->rLoss) << format->rShift;

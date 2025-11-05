@@ -1,8 +1,8 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include "surface.h"
-#include "color.h"
+#include "Surface.h"
+#include "Color.h"
 
 Surface SurfaceCreate(int width, int height, const PixelFormat* format) {
     if (width <= 0 || height <= 0) {

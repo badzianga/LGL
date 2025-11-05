@@ -1,6 +1,6 @@
 #include <X11/Xlib.h>
-#include "color.h"
-#include "window.h"
+#include "Color.h"
+#include "Window.h"
 
 typedef struct platform_t {
     Display* display;
