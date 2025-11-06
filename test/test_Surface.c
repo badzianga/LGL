@@ -15,20 +15,20 @@ void tearDown() {}
     } while (0)
 
 void test_SurfaceCreateShouldReturnInvalidSurfaceWhenDimensionsAreNotPositive() {
-    Surface surface1 = SurfaceCreate(-800, 600, &FORMAT_RGB332);
+    const Surface surface1 = SurfaceCreate(-800, 600, &FORMAT_RGB332);
     ASSERT_SURFACE_IS_INVALID(surface1);
     
-    Surface surface2 = SurfaceCreate(800, 0, &FORMAT_RGB332);
+    const Surface surface2 = SurfaceCreate(800, 0, &FORMAT_RGB332);
     ASSERT_SURFACE_IS_INVALID(surface2);
 }
 
 void test_SurfaceCreateShouldReturnInvalidSurfaceWhenPixelFormatIsNotSpecified() {
-    Surface surface = SurfaceCreate(800, 600, NULL);
+    const Surface surface = SurfaceCreate(800, 600, NULL);
     ASSERT_SURFACE_IS_INVALID(surface);
 }
 
 void test_CreatedSurfaceShouldHaveProperValues() {
-    Surface surface = SurfaceCreate(40, 30, &FORMAT_RGB332);
+    const Surface surface = SurfaceCreate(40, 30, &FORMAT_RGB332);
 
     TEST_ASSERT_NOT_NULL(surface.pixels);
     TEST_ASSERT_EQUAL(40, surface.width);
@@ -59,4 +59,91 @@ void test_SurfaceCopyShouldReturnExactCopyOfTheOriginal() {
 
     SurfaceDestroy(&original);
     SurfaceDestroy(&copy);
+}
+
+void test_SurfaceMakeConvertedShouldReturnInvalidSurfaceWhenFormatIsNotSpecified() {
+    Surface original = SurfaceCreate(4, 3, &FORMAT_RGB332);
+    Surface surface = SurfaceMakeConverted(original, NULL);
+
+    ASSERT_SURFACE_IS_INVALID(surface);
+
+    SurfaceDestroy(&original);
+}
+
+void test_ConvertedSurfaceShouldBeCopyOfTheOriginalIfFormatsAreTheSame() {
+    Surface original = SurfaceCreate(3, 2, &FORMAT_RGBA8888);
+    Surface converted = SurfaceMakeConverted(original, original.format);
+
+    TEST_ASSERT_EQUAL_HEX32_ARRAY(original.pixels, converted.pixels, original.height * original.width);
+    TEST_ASSERT_EQUAL(original.width, converted.width);
+    TEST_ASSERT_EQUAL(original.height, converted.height);
+    TEST_ASSERT_EQUAL_PTR(original.format, converted.format);
+
+    SurfaceDestroy(&original);
+    SurfaceDestroy(&converted);
+}
+
+void test_ConvertedSurfaceWithTheSameAmountOfBppShouldHasTheSameColors() {
+    Surface original = SurfaceCreate(3, 2, &FORMAT_ARGB8888);
+    
+    const Color colors[6] = { RED, GREEN, BLUE, CYAN, MAGENTA, YELLOW };
+    for (int i = 0; i < 6; ++i) {
+        ((uint32_t*)original.pixels)[i] = ColorToPixel(original.format, colors[i]);
+    }
+
+    Surface converted = SurfaceMakeConverted(original, &FORMAT_RGBA8888);
+    for (int i = 0; i < 6; ++i) {
+        Color color = PixelToColor(&FORMAT_RGBA8888, ((uint32_t*)converted.pixels)[i]);
+        TEST_ASSERT_EQUAL_HEX8(colors[i].r, color.r);
+        TEST_ASSERT_EQUAL_HEX8(colors[i].g, color.g);
+        TEST_ASSERT_EQUAL_HEX8(colors[i].b, color.b);
+        TEST_ASSERT_EQUAL_HEX8(colors[i].a, color.a);
+    }
+
+    SurfaceDestroy(&original);
+    SurfaceDestroy(&converted);
+}
+
+void test_ConversionFromHigherToLowerBppShouldWorkCorrectly() {
+    Surface original = SurfaceCreate(3, 2, &FORMAT_ARGB8888);
+    const Color colors[6] = { RED, GREEN, BLUE, CYAN, MAGENTA, YELLOW };
+    for (int i = 0; i < 6; ++i) {
+        ((uint32_t*)original.pixels)[i] = ColorToPixel(original.format, colors[i]);
+    }
+
+    Surface converted = SurfaceMakeConverted(original, &FORMAT_RGB565);
+    const uint16_t expected[6] = {
+        ColorToPixel(&FORMAT_RGB565, colors[0]),
+        ColorToPixel(&FORMAT_RGB565, colors[1]),
+        ColorToPixel(&FORMAT_RGB565, colors[2]),
+        ColorToPixel(&FORMAT_RGB565, colors[3]),
+        ColorToPixel(&FORMAT_RGB565, colors[4]),
+        ColorToPixel(&FORMAT_RGB565, colors[5]),
+    };
+    TEST_ASSERT_EQUAL_HEX16_ARRAY(expected, converted.pixels, 6);
+
+    SurfaceDestroy(&original);
+    SurfaceDestroy(&converted);
+}
+
+void test_ConversionFromHLowerToHigherBppShouldReturnSurfaceWithComponentLosses() {
+    Surface original = SurfaceCreate(3, 2, &FORMAT_RGB332);
+    const Color colors[6] = { RED, GREEN, BLUE, CYAN, MAGENTA, YELLOW };
+    for (int i = 0; i < 6; ++i) {
+        ((uint8_t*)original.pixels)[i] = ColorToPixel(original.format, colors[i]);
+    }
+
+    Surface converted = SurfaceMakeConverted(original, &FORMAT_ARGB8888);
+    const uint32_t expected[6] = {
+        ColorToPixel(&FORMAT_ARGB8888, PixelToColor(&FORMAT_RGB332, ColorToPixel(&FORMAT_RGB332, colors[0]))),
+        ColorToPixel(&FORMAT_ARGB8888, PixelToColor(&FORMAT_RGB332, ColorToPixel(&FORMAT_RGB332, colors[1]))),
+        ColorToPixel(&FORMAT_ARGB8888, PixelToColor(&FORMAT_RGB332, ColorToPixel(&FORMAT_RGB332, colors[2]))),
+        ColorToPixel(&FORMAT_ARGB8888, PixelToColor(&FORMAT_RGB332, ColorToPixel(&FORMAT_RGB332, colors[3]))),
+        ColorToPixel(&FORMAT_ARGB8888, PixelToColor(&FORMAT_RGB332, ColorToPixel(&FORMAT_RGB332, colors[4]))),
+        ColorToPixel(&FORMAT_ARGB8888, PixelToColor(&FORMAT_RGB332, ColorToPixel(&FORMAT_RGB332, colors[5]))),
+    };
+    TEST_ASSERT_EQUAL_HEX32_ARRAY(expected, converted.pixels, 6);
+
+    SurfaceDestroy(&original);
+    SurfaceDestroy(&converted);
 }
