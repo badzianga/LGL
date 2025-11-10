@@ -79,33 +79,6 @@ Surface SurfaceMakeConverted(Surface surface, const PixelFormat* format) {
     return new;
 }
 
-static void Fill2(Surface surface, uint16_t color) {
-    for (int y = 0; y < surface.height; ++y) {
-        for (int x = 0; x < surface.width; ++x) {
-            uint16_t* pixel = &((uint16_t*)surface.pixels)[y * surface.width + x];
-            *pixel = color;
-        }
-    }
-}
-
-static void Fill4(Surface surface, uint32_t color) {
-    for (int y = 0; y < surface.height; ++y) {
-        for (int x = 0; x < surface.width; ++x) {
-            uint32_t* pixel = &((uint32_t*)surface.pixels)[y * surface.width + x];
-            *pixel = color;
-        }
-    }
-}
-
-void SurfaceFill(Surface surface, Color color) {
-    if (surface.format->bytesPerPixel == 2) {
-        Fill2(surface, ColorToPixel(surface.format, color));
-    }
-    else if (surface.format->bytesPerPixel == 4) {
-        Fill4(surface, ColorToPixel(surface.format, color));
-    }
-}
-
 void SurfaceBlit(Surface dest, Surface src, int x, int y) {
     assert(dest.format == src.format
            && "Surfaces must be in the same pixel format");
