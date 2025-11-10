@@ -45,7 +45,7 @@ Surface SurfaceMakeConverted(Surface surface, const PixelFormat* format) {
 
     for (int y = 0; y < surface.height; ++y) {
         for (int x = 0; x < surface.width; ++x) {
-            const void* fromPtr = surface.pixels + (y * surface.width + x) * srcBpp;
+            const void* fromPtr = (uint8_t*)surface.pixels + (y * surface.width + x) * srcBpp;
             uint32_t fromPixel = 0;
             switch (srcBpp) {
                 case 1: {
@@ -61,7 +61,7 @@ Surface SurfaceMakeConverted(Surface surface, const PixelFormat* format) {
 
             Color color = PixelToColor(surface.format, fromPixel);
 
-            const void* toPtr = new.pixels + (y * new.width + x) * dstBpp;
+            const void* toPtr = (uint8_t*)new.pixels + (y * new.width + x) * dstBpp;
             uint32_t toPixel = ColorToPixel(new.format, color);
             switch (dstBpp) {
                 case 1: {
