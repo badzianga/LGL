@@ -147,3 +147,30 @@ void test_ConversionFromHLowerToHigherBppShouldReturnSurfaceWithComponentLosses(
     SurfaceDestroy(&original);
     SurfaceDestroy(&converted);
 }
+
+void test_ShouldBlitWhenSurfacesHaveTheSameFormat() {
+    Surface dest = SurfaceCreate(3, 2, &FORMAT_ARGB8888);
+
+    uint8_t expected[] = {
+        0xFF, 0xFD, 0x00, 0x00,
+        0xFF, 0x00, 0xFF, 0x01,
+        0xFF, 0xFF, 0xFF, 0xFF,
+
+        0xFF, 0x00, 0x00, 0xFE,
+        0xFF, 0xFF, 0xFE, 0x00,
+        0xFF, 0x00, 0x00, 0x00,
+    };
+
+    Surface src = (Surface){
+        .pixels = expected,
+        .width = 3,
+        .height = 2,
+        .format = &FORMAT_ARGB8888
+    };
+
+    SurfaceBlit(dest, src, 0, 0);
+
+    TEST_ASSERT_EQUAL_HEX32_ARRAY(expected, dest.pixels, 6);
+
+    SurfaceDestroy(&dest);
+}

@@ -79,21 +79,38 @@ Surface SurfaceMakeConverted(Surface surface, const PixelFormat* format) {
     return new;
 }
 
-void SurfaceBlit(Surface dest, Surface src, int x, int y) {
-    assert(dest.format == src.format
-           && "Surfaces must be in the same pixel format");
-    assert(dest.format->bytesPerPixel == 4 && src.format->bytesPerPixel == 4
-           && "TODO: only surfaces with 4 bytes per pixel are supported for now");
+static void BlitSameFormat(Surface dest, Surface src, int x, int y) {
+    const int bpp = src.format->bytesPerPixel;
 
-    for (int h = 0; h < src.height; ++h) {
-        int yi = y + h;
-        if (yi < 0 || yi >= dest.height) continue;
-        for (int w = 0; w < src.width; ++w) {
-            int xi = x + w;
-            if (xi < 0 || xi >= dest.width) continue;
-            uint32_t* destPixel = &((uint32_t*)dest.pixels)[yi * dest.width + xi];
-            const uint32_t srcPixel = ((uint32_t*)src.pixels)[h * src.width + x];
-            *destPixel = srcPixel;
+    for (int sy = 0; sy < src.height; ++sy) {
+        const int dy = y + sy;
+        if (dy < 0 || dy >= dest.height) continue;
+        for (int sx = 0; sx < src.width; ++sx) {
+            const int dx = x + sx;
+            if (dx < 0 || dx >= dest.width) continue;
+            const uint8_t* src_pixel = (uint8_t*)src.pixels + (sy * src.width  + sx) * bpp;
+            uint8_t* dest_pixel = (uint8_t*)dest.pixels + (dy * dest.width + dx) * bpp;
+
+            for (int b = 0; b < bpp; ++b) {
+                dest_pixel[b] = src_pixel[b];
+            }
         }
+    }
+}
+
+static void BlitDifferentFormat(Surface dest, Surface src, int x, int y) {
+    (void)dest;
+    (void)src;
+    (void)x;
+    (void)y;
+    assert(0 && "TODO: not implemented");
+}
+
+void SurfaceBlit(Surface dest, Surface src, int x, int y) {
+    if (dest.format == src.format) {
+        BlitSameFormat(dest, src, x, y);
+    }
+    else {
+        BlitDifferentFormat(dest, src, x, y);
     }
 }
