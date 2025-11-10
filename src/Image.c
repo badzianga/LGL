@@ -1,5 +1,5 @@
 #include "Image.h"
-#include "Color.h"
+#include "PixelFormat.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 // #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -9,13 +9,19 @@ Surface ImageLoad(const char* path) {
     int format;
     Surface surface;
 
-    surface.pixels = (Color*)stbi_load(
+    void* data = stbi_load(
         path,
         &surface.width,
         &surface.height,
         &format,
-        sizeof(Color));
+        STBI_rgb_alpha
+    );
 
+    if (data == NULL) {
+        return (Surface){ 0 };
+    }
+
+    surface.pixels = data;
     surface.format = &FORMAT_RGBA8888;
 
     return surface;
