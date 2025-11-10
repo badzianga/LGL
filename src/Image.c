@@ -6,14 +6,13 @@
 // #include "stb_image_write.h"
 
 Surface ImageLoad(const char* path) {
-    int format;
-    Surface surface;
+    int width, height, comp;
 
     void* data = stbi_load(
         path,
-        &surface.width,
-        &surface.height,
-        &format,
+        &width,
+        &height,
+        &comp,
         STBI_rgb_alpha
     );
 
@@ -21,10 +20,8 @@ Surface ImageLoad(const char* path) {
         return (Surface){ 0 };
     }
 
-    surface.pixels = data;
-    surface.format = &FORMAT_RGBA8888;
-
-    return surface;
+    // TODO: on big-endian system it should probabyl be RGBA8888
+    return (Surface){ data, width, height, &FORMAT_ABGR8888 };
 }
 
 void ImageSave(Surface image, const char* path) {

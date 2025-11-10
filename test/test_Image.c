@@ -12,7 +12,7 @@ void test_ShouldLoadPngImageSuccessfully() {
     TEST_ASSERT_NOT_NULL(image.pixels);
     TEST_ASSERT_EQUAL(3, image.width);
     TEST_ASSERT_EQUAL(2, image.height);
-    TEST_ASSERT_EQUAL_PTR(&FORMAT_RGBA8888, image.format);
+    TEST_ASSERT_EQUAL_PTR(&FORMAT_ABGR8888, image.format);
 
     const uint8_t* pixelArray = (uint8_t*)image.pixels;
     const uint8_t expected[] = {
@@ -36,7 +36,7 @@ void test_ShouldLoadJpgImageSuccessfully() {
     TEST_ASSERT_NOT_NULL(image.pixels);
     TEST_ASSERT_EQUAL(3, image.width);
     TEST_ASSERT_EQUAL(2, image.height);
-    TEST_ASSERT_EQUAL_PTR(&FORMAT_RGBA8888, image.format);
+    TEST_ASSERT_EQUAL_PTR(&FORMAT_ABGR8888, image.format);
 
     const uint8_t* pixelArray = (uint8_t*)image.pixels;
     const uint8_t expected[] = {
