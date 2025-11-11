@@ -101,3 +101,7 @@ typedef enum {
 bool IsKeyPressed(LGL_KeyCode key);
 bool IsKeyDown(LGL_KeyCode key);
 bool IsKeyReleased(LGL_KeyCode key);
+
+int GetMouseX(void);
+int GetMouseY(void);
+void GetMousePosition(int* x, int* y);

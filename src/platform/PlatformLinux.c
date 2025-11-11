@@ -61,7 +61,13 @@ typedef struct KeyboardState {
     bool released[MAX_KEYS];
 } KeyboardState;
 
+typedef struct MouseState {
+    int x;
+    int y;
+} MouseState;
+
 static KeyboardState keys = { 0 };
+static MouseState mouse = { 0 };
 
 bool IsKeyPressed(LGL_KeyCode key) {
     return keys.pressed[key];
@@ -73,6 +79,19 @@ bool IsKeyDown(LGL_KeyCode key) {
 
 bool IsKeyReleased(LGL_KeyCode key) {
     return keys.released[key];
+}
+
+int GetMouseX(void) {
+    return mouse.x;
+}
+
+int GetMouseY(void) {
+    return mouse.y;
+}
+
+void GetMousePosition(int* x, int* y) {
+    *x = mouse.x;
+    *y = mouse.y;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -186,6 +205,16 @@ inline static void HandleKeyboardEvent(XEvent event) {
     }
 }
 
+inline static void HandleMousePosition() {
+    int rootX, rootY, winX, winY;
+    unsigned int mask;
+    Window returnedRoot, returnedChild;
+    if (XQueryPointer(platform.display, platform.window, &returnedRoot, &returnedChild, &rootX, &rootY, &winX, &winY, &mask)) {
+        mouse.x = winX < 0 ? 0 : (winX >= platform.surface.width ? platform.surface.width - 1 : winX);
+        mouse.y = winY < 0 ? 0 : (winY >= platform.surface.height ? platform.surface.height - 1 : winY);
+    }
+}
+
 void WindowBeginFrame() {
     XEvent event;
 
@@ -203,6 +232,8 @@ void WindowBeginFrame() {
             HandleKeyboardEvent(event);
         }
     }
+
+    HandleMousePosition();
 }
 
 void WindowEndFrame() {
