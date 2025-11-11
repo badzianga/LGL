@@ -216,19 +216,26 @@ inline static void HandleClientMessageEvent(XEvent event) {
     }
 }
 
-inline static void HandleKeyboardEvent(XEvent event) {
-    // check autorepeat
-    if (event.type == KeyRelease) {
-        if (XEventsQueued(platform.display, QueuedAfterReading)) {
-            XEvent nextEvent;
-            XPeekEvent(platform.display, &nextEvent);
+inline static void HandleKeyPressEvent(XEvent event) {
+    KeySym sym = XLookupKeysym(&event.xkey, 0);
+    KeyCode key = MapKeyCode(sym);
+    if (key == KEY_UNKNOWN) return;
 
-            if (nextEvent.type == KeyPress &&
-                nextEvent.xkey.time == event.xkey.time &&
-                nextEvent.xkey.keycode == event.xkey.keycode) {
-                XNextEvent(platform.display, &nextEvent);
-                return;
-            }
+    if (!keys.down[key]) keys.pressed[key] = true;
+    keys.down[key] = true;
+}
+
+inline static void HandleKeyReleaseEvent(XEvent event) {
+    // check autorepeat
+    if (XEventsQueued(platform.display, QueuedAfterReading)) {
+        XEvent nextEvent;
+        XPeekEvent(platform.display, &nextEvent);
+
+        if (nextEvent.type == KeyPress &&
+            nextEvent.xkey.time == event.xkey.time &&
+            nextEvent.xkey.keycode == event.xkey.keycode) {
+            XNextEvent(platform.display, &nextEvent);
+            return;
         }
     }
 
@@ -236,13 +243,8 @@ inline static void HandleKeyboardEvent(XEvent event) {
     KeyCode key = MapKeyCode(sym);
     if (key == KEY_UNKNOWN) return;
 
-    if (event.type == KeyPress) {
-        if (!keys.down[key]) keys.pressed[key] = true;
-        keys.down[key] = true;
-    } else {
-        keys.down[key] = false;
-        keys.released[key] = true;
-    }
+    keys.down[key] = false;
+    keys.released[key] = true;
 }
 
 inline static void HandleButtonPressEvent(XEvent event) {
@@ -279,9 +281,11 @@ void WindowBeginFrame() {
     while (XPending(platform.display)) {
         XNextEvent(platform.display, &event);
         switch (event.type) {
-            case KeyPress:
+            case KeyPress: {
+                HandleKeyPressEvent(event);
+            } break;
             case KeyRelease: {
-                HandleKeyboardEvent(event);
+                HandleKeyReleaseEvent(event);
             } break;
             case ButtonPress: {
                 HandleButtonPressEvent(event);
