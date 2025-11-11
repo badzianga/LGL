@@ -1,10 +1,9 @@
 #include <X11/keysym.h>
-#include <X11/X.h>
+#include <X11/Xlib.h>
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
-#include <unistd.h> 
-#include <X11/Xlib.h>
+#include <unistd.h>
 #include "Input.h"
 #include "Window.h"
 
@@ -38,8 +37,10 @@ typedef struct MouseState {
     int x;
     int y;
 
-    bool cursorHidden;
     Cursor invisibleCursor;
+    bool cursorHidden;
+
+    char wheelMove;    
 } MouseState;
 
 static Platform platform = { 0 };
@@ -127,6 +128,10 @@ void GetMousePosition(int* x, int* y) {
     *y = mouse.y;
 }
 
+int GetMouseWheelMove() {
+    return mouse.wheelMove;
+}
+
 bool IsMouseButtonPressed(LGL_MouseButton button) {
     return mouse.buttons.pressed[button];
 }
@@ -147,6 +152,34 @@ void SetMousePosition(int x, int y) {
     XFlush(platform.display);
     mouse.x = x;
     mouse.y = y;
+}
+
+void ShowCursor() {
+    if (!mouse.cursorHidden) return;
+    XUndefineCursor(platform.display, platform.window);
+    XFreeCursor(platform.display, mouse.invisibleCursor);
+    XFlush(platform.display);
+    mouse.cursorHidden = false;
+}
+
+void HideCursor() {
+    if (mouse.cursorHidden) return;
+
+    Pixmap pixmap;
+    XColor black = { 0 };
+    static char noData[8] = { 0 };
+
+    pixmap = XCreateBitmapFromData(platform.display, platform.window, noData, 8, 8);
+    mouse.invisibleCursor = XCreatePixmapCursor(platform.display, pixmap, pixmap, &black, &black, 0, 0);
+    XDefineCursor(platform.display, platform.window, mouse.invisibleCursor);
+    XFreePixmap(platform.display, pixmap);
+    XFlush(platform.display);
+
+    mouse.cursorHidden = true;
+}
+
+bool IsCursorHidden() {
+    return mouse.cursorHidden;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -259,6 +292,14 @@ inline static void HandleKeyReleaseEvent(XEvent event) {
 }
 
 inline static void HandleButtonPressEvent(XEvent event) {
+    switch (event.xbutton.button) {
+        case Button4: {
+            mouse.wheelMove = 1;
+        } break;
+        case Button5: {
+            mouse.wheelMove = -1;
+        } break;
+    }
     LGL_MouseButton button = MapMouseButton(event.xbutton.button);
     if (!mouse.buttons.down[button]) {
         mouse.buttons.pressed[button] = true;
@@ -288,6 +329,8 @@ void WindowBeginFrame() {
 
     memset(mouse.buttons.pressed, 0, sizeof(mouse.buttons.pressed));
     memset(mouse.buttons.released, 0, sizeof(mouse.buttons.released));
+
+    mouse.wheelMove = 0;
 
     while (XPending(platform.display)) {
         XNextEvent(platform.display, &event);

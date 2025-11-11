@@ -111,9 +111,13 @@ bool IsKeyReleased(LGL_KeyCode key);
 int GetMouseX();
 int GetMouseY();
 void GetMousePosition(int* x, int* y);
+int GetMouseWheelMove();
 
 bool IsMouseButtonPressed(LGL_MouseButton button);
 bool IsMouseButtonDown(LGL_MouseButton button);
 bool IsMouseButtonReleased(LGL_MouseButton button);
 
 void SetMousePosition(int x, int y);
+void ShowCursor();
+void HideCursor();
+bool IsCursorHidden();
