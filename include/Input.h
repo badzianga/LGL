@@ -115,3 +115,5 @@ void GetMousePosition(int* x, int* y);
 bool IsMouseButtonPressed(LGL_MouseButton button);
 bool IsMouseButtonDown(LGL_MouseButton button);
 bool IsMouseButtonReleased(LGL_MouseButton button);
+
+void SetMousePosition(int x, int y);

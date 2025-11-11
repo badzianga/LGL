@@ -8,6 +8,46 @@
 #include "Input.h"
 #include "Window.h"
 
+#define MAX_KEYS 256
+#define MAX_MOUSE_BUTTONS 8
+
+typedef struct Platform {
+    Display* display;
+    Window window;
+    int screen;
+    int shouldClose;
+    Surface surface;
+    Atom wmDeleteWindow;
+    XImage* image;
+    GC gc;
+} Platform;
+
+typedef struct KeyboardState {
+    bool down[MAX_KEYS];
+    bool pressed[MAX_KEYS];
+    bool released[MAX_KEYS];
+} KeyboardState;
+
+typedef struct MouseState {
+    struct {
+        bool down[MAX_MOUSE_BUTTONS];
+        bool pressed[MAX_MOUSE_BUTTONS];
+        bool released[MAX_MOUSE_BUTTONS];
+    } buttons;
+    
+    int x;
+    int y;
+
+    bool cursorHidden;
+    Cursor invisibleCursor;
+} MouseState;
+
+static Platform platform = { 0 };
+static KeyboardState keys = { 0 };
+static MouseState mouse = { 0 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
 static LGL_KeyCode MapKeyCode(KeySym sym) {
     switch (sym) {
         case XK_Escape:     return KEY_ESCAPE;
@@ -62,32 +102,6 @@ static LGL_MouseButton MapMouseButton(uint32_t xButton) {
     }
 }
 
-#define MAX_KEYS 256
-#define MAX_MOUSE_BUTTONS 8
-
-typedef struct KeyboardState {
-    bool down[MAX_KEYS];
-    bool pressed[MAX_KEYS];
-    bool released[MAX_KEYS];
-} KeyboardState;
-
-typedef struct MouseState {
-    struct {
-        bool down[MAX_MOUSE_BUTTONS];
-        bool pressed[MAX_MOUSE_BUTTONS];
-        bool released[MAX_MOUSE_BUTTONS];
-    } buttons;
-    
-    int x;
-    int y;
-
-    bool cursorHidden;
-    Cursor invisibleCursor;
-} MouseState;
-
-static KeyboardState keys = { 0 };
-static MouseState mouse = { 0 };
-
 bool IsKeyPressed(LGL_KeyCode key) {
     return keys.pressed[key];
 }
@@ -125,20 +139,17 @@ bool IsMouseButtonReleased(LGL_MouseButton button) {
     return mouse.buttons.released[button];
 }
 
+void SetMousePosition(int x, int y) {
+    x = x < 0 ? 0 : (x >= platform.surface.width ? platform.surface.width - 1 : x);
+    y = y < 0 ? 0 : (y >= platform.surface.height ? platform.surface.height - 1 : y);
+
+    XWarpPointer(platform.display, None, platform.window, 0, 0, 0, 0, x, y);
+    XFlush(platform.display);
+    mouse.x = x;
+    mouse.y = y;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
-
-typedef struct Platform {
-    Display* display;
-    Window window;
-    int screen;
-    int shouldClose;
-    Surface surface;
-    Atom wmDeleteWindow;
-    XImage* image;
-    GC gc;
-} Platform;
-
-static Platform platform = { 0 };
 
 static void InitTimer(void);
 static void FrameTick(void);
