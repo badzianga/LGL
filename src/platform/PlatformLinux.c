@@ -1,7 +1,10 @@
+#include <X11/X.h>
+#include <time.h>
+#include <unistd.h> 
 #include <X11/Xlib.h>
 #include "Window.h"
 
-typedef struct platform_t {
+typedef struct Platform {
     Display* display;
     Window window;
     int screen;
@@ -13,6 +16,9 @@ typedef struct platform_t {
 } Platform;
 
 static Platform platform = { 0 };
+
+static void InitTimer(void);
+static void FrameTick(void);
 
 Surface WindowInit(int width, int height, const char* title) {
     platform.display = XOpenDisplay(NULL);
@@ -55,6 +61,8 @@ Surface WindowInit(int width, int height, const char* title) {
     platform.gc = XCreateGC(platform.display, platform.window, 0, NULL);
 
     XMapWindow(platform.display, platform.window);
+
+    InitTimer();
 
     return platform.surface;
 }
@@ -102,4 +110,65 @@ void WindowEndFrame() {
     );
 
     XSync(platform.display, False);
+
+    FrameTick();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+typedef struct TimeHandling {
+    double targetFrameTime;
+    struct timespec lastFrameTime;
+    double deltaTime;
+    struct timespec startTime;
+} TimeHandling;
+
+static TimeHandling timeHandling = { 0 };
+
+inline static double TimespecToSeconds(struct timespec t) {
+    return (double)t.tv_sec + (double)t.tv_nsec / 1e9;
+}
+
+static void InitTimer(void) {
+    clock_gettime(CLOCK_MONOTONIC, &timeHandling.startTime);
+    timeHandling.lastFrameTime = timeHandling.startTime;
+}
+
+void WindowSetTargetFPS(int fps) {
+    if (fps <= 0) {
+        timeHandling.targetFrameTime = 0.0;
+    } else {
+        timeHandling.targetFrameTime = 1.0 / (double)fps;
+    }
+}
+
+float WindowGetFrameTime(void) {
+    return (float)timeHandling.deltaTime;
+}
+
+double WindowGetTime(void) {
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    return TimespecToSeconds(now) - TimespecToSeconds(timeHandling.startTime);
+}
+
+static void FrameTick(void) {
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
+    double current = TimespecToSeconds(now);
+    double previous = TimespecToSeconds(timeHandling.lastFrameTime);
+    timeHandling.deltaTime = current - previous;
+
+    if (timeHandling.targetFrameTime > 0.0 && timeHandling.deltaTime < timeHandling.targetFrameTime) {
+        double sleepTime = timeHandling.targetFrameTime - timeHandling.deltaTime;
+        if (sleepTime > 0.0) {
+            usleep((useconds_t)(sleepTime * 1e6));
+        }
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        current = TimespecToSeconds(now);
+        timeHandling.deltaTime = current - previous;
+    }
+
+    timeHandling.lastFrameTime = now;
 }
