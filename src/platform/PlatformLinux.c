@@ -53,7 +53,17 @@ static LGL_KeyCode MapKeyCode(KeySym sym) {
     return KEY_UNKNOWN;
 }
 
+static LGL_MouseButton MapMouseButton(uint32_t xButton) {
+    switch (xButton) {
+        case Button1: return MOUSE_BUTTON_LEFT;
+        case Button2: return MOUSE_BUTTON_MIDDLE;
+        case Button3: return MOUSE_BUTTON_RIGHT;
+        default: return (LGL_MouseButton)(xButton - 1);
+    }
+}
+
 #define MAX_KEYS 256
+#define MAX_MOUSE_BUTTONS 8
 
 typedef struct KeyboardState {
     bool down[MAX_KEYS];
@@ -62,8 +72,17 @@ typedef struct KeyboardState {
 } KeyboardState;
 
 typedef struct MouseState {
+    struct {
+        bool down[MAX_MOUSE_BUTTONS];
+        bool pressed[MAX_MOUSE_BUTTONS];
+        bool released[MAX_MOUSE_BUTTONS];
+    } buttons;
+    
     int x;
     int y;
+
+    bool cursorHidden;
+    Cursor invisibleCursor;
 } MouseState;
 
 static KeyboardState keys = { 0 };
@@ -81,17 +100,29 @@ bool IsKeyReleased(LGL_KeyCode key) {
     return keys.released[key];
 }
 
-int GetMouseX(void) {
+int GetMouseX() {
     return mouse.x;
 }
 
-int GetMouseY(void) {
+int GetMouseY() {
     return mouse.y;
 }
 
 void GetMousePosition(int* x, int* y) {
     *x = mouse.x;
     *y = mouse.y;
+}
+
+bool IsMouseButtonPressed(LGL_MouseButton button) {
+    return mouse.buttons.pressed[button];
+}
+
+bool IsMouseButtonDown(LGL_MouseButton button) {
+    return mouse.buttons.down[button];
+}
+
+bool IsMouseButtonReleased(LGL_MouseButton button) {
+    return mouse.buttons.released[button];
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -129,8 +160,11 @@ Surface WindowInit(int width, int height, const char* title) {
         BlackPixel(platform.display, platform.screen)
     );
 
-    const long mask = KeyPressMask | KeyReleaseMask | ExposureMask;
-    XSelectInput(platform.display, platform.window, mask);
+    const long eventMask =
+        KeyPressMask | KeyReleaseMask |
+        ButtonPressMask | ButtonReleaseMask | PointerMotionMask |
+        ExposureMask;
+    XSelectInput(platform.display, platform.window, eventMask);
 
     platform.surface = SurfaceCreate(width, height, &FORMAT_ARGB8888);
     WindowSetTitle(title);
@@ -176,6 +210,12 @@ void WindowSetTitle(const char* title) {
     XStoreName(platform.display, platform.window, title);
 }
 
+inline static void HandleClientMessageEvent(XEvent event) {
+    if ((Atom)event.xclient.data.l[0] == platform.wmDeleteWindow) {
+        platform.shouldClose = 1;
+    }
+}
+
 inline static void HandleKeyboardEvent(XEvent event) {
     // check autorepeat
     if (event.type == KeyRelease) {
@@ -205,14 +245,26 @@ inline static void HandleKeyboardEvent(XEvent event) {
     }
 }
 
-inline static void HandleMousePosition() {
-    int rootX, rootY, winX, winY;
-    unsigned int mask;
-    Window returnedRoot, returnedChild;
-    if (XQueryPointer(platform.display, platform.window, &returnedRoot, &returnedChild, &rootX, &rootY, &winX, &winY, &mask)) {
-        mouse.x = winX < 0 ? 0 : (winX >= platform.surface.width ? platform.surface.width - 1 : winX);
-        mouse.y = winY < 0 ? 0 : (winY >= platform.surface.height ? platform.surface.height - 1 : winY);
+inline static void HandleButtonPressEvent(XEvent event) {
+    LGL_MouseButton button = MapMouseButton(event.xbutton.button);
+    if (!mouse.buttons.down[button]) {
+        mouse.buttons.pressed[button] = true;
     }
+    mouse.buttons.down[button] = true;
+}
+
+inline static void HandleButtonReleaseEvent(XEvent event) {
+    LGL_MouseButton button = MapMouseButton(event.xbutton.button);
+    mouse.buttons.down[button] = false;
+    mouse.buttons.released[button] = true;
+}
+
+inline static void HandleMouseMotionEvent(XEvent event) {
+    const int x = event.xmotion.x;
+    const int y = event.xmotion.y;
+    
+    mouse.x = x < 0 ? 0 : (x >= platform.surface.width ? platform.surface.width - 1 : x);
+    mouse.y = y < 0 ? 0 : (y >= platform.surface.height ? platform.surface.height - 1 : y);
 }
 
 void WindowBeginFrame() {
@@ -221,19 +273,30 @@ void WindowBeginFrame() {
     memset(keys.pressed, 0, sizeof(keys.pressed));
     memset(keys.released, 0, sizeof(keys.released));
 
+    memset(mouse.buttons.pressed, 0, sizeof(mouse.buttons.pressed));
+    memset(mouse.buttons.released, 0, sizeof(mouse.buttons.released));
+
     while (XPending(platform.display)) {
         XNextEvent(platform.display, &event);
-        if (event.type == ClientMessage) {
-            if ((Atom)event.xclient.data.l[0] == platform.wmDeleteWindow) {
-                platform.shouldClose = 1;
-            }
-        }
-        if (event.type == KeyPress || event.type == KeyRelease) {
-            HandleKeyboardEvent(event);
+        switch (event.type) {
+            case KeyPress:
+            case KeyRelease: {
+                HandleKeyboardEvent(event);
+            } break;
+            case ButtonPress: {
+                HandleButtonPressEvent(event);
+            } break;
+            case ButtonRelease: {
+                HandleButtonReleaseEvent(event);
+            } break;
+            case MotionNotify: {
+                HandleMouseMotionEvent(event);
+            } break;
+            case ClientMessage: {
+                HandleClientMessageEvent(event);
+            } break;
         }
     }
-
-    HandleMousePosition();
 }
 
 void WindowEndFrame() {

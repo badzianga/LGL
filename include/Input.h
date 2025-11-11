@@ -98,10 +98,20 @@ typedef enum {
     KEY_RIGHT_META   = 0xE7,
 } LGL_KeyCode;
 
+typedef enum MouseButton {
+    MOUSE_BUTTON_LEFT   = 0,
+    MOUSE_BUTTON_MIDDLE = 1,
+    MOUSE_BUTTON_RIGHT  = 2,
+} LGL_MouseButton;
+
 bool IsKeyPressed(LGL_KeyCode key);
 bool IsKeyDown(LGL_KeyCode key);
 bool IsKeyReleased(LGL_KeyCode key);
 
-int GetMouseX(void);
-int GetMouseY(void);
+int GetMouseX();
+int GetMouseY();
 void GetMousePosition(int* x, int* y);
+
+bool IsMouseButtonPressed(LGL_MouseButton button);
+bool IsMouseButtonDown(LGL_MouseButton button);
+bool IsMouseButtonReleased(LGL_MouseButton button);
