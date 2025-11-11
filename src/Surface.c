@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include "Surface.h"
@@ -88,22 +87,49 @@ static void BlitSameFormat(Surface dest, Surface src, int x, int y) {
         for (int sx = 0; sx < src.width; ++sx) {
             const int dx = x + sx;
             if (dx < 0 || dx >= dest.width) continue;
-            const uint8_t* src_pixel = (uint8_t*)src.pixels + (sy * src.width  + sx) * bpp;
-            uint8_t* dest_pixel = (uint8_t*)dest.pixels + (dy * dest.width + dx) * bpp;
+            const uint8_t* srcPixel = (uint8_t*)src.pixels + (sy * src.width  + sx) * bpp;
+            uint8_t* destPixel = (uint8_t*)dest.pixels + (dy * dest.width + dx) * bpp;
 
             for (int b = 0; b < bpp; ++b) {
-                dest_pixel[b] = src_pixel[b];
+                destPixel[b] = srcPixel[b];
             }
         }
     }
 }
 
 static void BlitDifferentFormat(Surface dest, Surface src, int x, int y) {
-    (void)dest;
-    (void)src;
-    (void)x;
-    (void)y;
-    assert(0 && "TODO: not implemented");
+    const int srcBpp = src.format->bytesPerPixel;
+    const int destBpp = dest.format->bytesPerPixel;
+
+    for (int sy = 0; sy < src.height; ++sy) {
+        const int dy = y + sy;
+        if (dy < 0 || dy >= dest.height) continue;
+        for (int sx = 0; sx < src.width; ++sx) {
+            const int dx = x + sx;
+            if (dx < 0 || dx >= dest.width) continue;
+
+            const uint8_t* srcPixel = (uint8_t*)src.pixels + (sy * src.width  + sx) * srcBpp;
+            uint32_t srcPixelValue = 0;
+            switch (srcBpp) {
+                case 1: {
+                    srcPixelValue = *srcPixel;
+                } break;
+                case 2: {
+                    srcPixelValue = *(uint16_t*)srcPixel;
+                } break;
+                case 4: {
+                    srcPixelValue = *(uint32_t*)srcPixel;
+                } break;
+            }
+            const uint32_t newValue = ColorToPixel(dest.format, PixelToColor(src.format, srcPixelValue));
+
+            uint8_t* destPixel = (uint8_t*)dest.pixels + (dy * dest.width + dx) * destBpp;
+
+            for (int b = 0; b < destBpp; ++b) {
+                destPixel[b] = ((uint8_t*)&newValue)[b];
+            }
+        }
+    }
 }
 
 void SurfaceBlit(Surface dest, Surface src, int x, int y) {

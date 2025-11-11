@@ -149,7 +149,7 @@ void test_ConversionFromHLowerToHigherBppShouldReturnSurfaceWithComponentLosses(
 }
 
 void test_ShouldBlitWhenSurfacesHaveTheSameFormat() {
-    Surface dest = SurfaceCreate(3, 2, &FORMAT_ARGB8888);
+    Surface dest = SurfaceCreate(3, 2, &FORMAT_RGBA8888);
 
     uint8_t expected[] = {
         0xFF, 0xFD, 0x00, 0x00,
@@ -161,16 +161,45 @@ void test_ShouldBlitWhenSurfacesHaveTheSameFormat() {
         0xFF, 0x00, 0x00, 0x00,
     };
 
-    Surface src = (Surface){
+    const Surface src = (Surface){
         .pixels = expected,
         .width = 3,
         .height = 2,
-        .format = &FORMAT_ARGB8888
+        .format = &FORMAT_RGBA8888
     };
 
     SurfaceBlit(dest, src, 0, 0);
 
     TEST_ASSERT_EQUAL_HEX32_ARRAY(expected, dest.pixels, 6);
+
+    SurfaceDestroy(&dest);
+}
+
+void test_ShouldBlitWhenSurfacesHaveDifferentFormats() {
+    Surface dest = SurfaceCreate(3, 1, &FORMAT_RGBA8888);
+
+    uint8_t expected[] = {
+        0xFF, 0x00, 0x00, 0xFF,
+        0xFF, 0x00, 0xFF, 0x00,
+        0xFF, 0xFF, 0x00, 0x00,
+    };
+
+    uint8_t buffer[] = {
+        0x00, 0x00, 0xFF, 0xFF,
+        0x00, 0xFF, 0x00, 0xFF,
+        0xFF, 0x00, 0x00, 0xFF,
+    };
+
+    const Surface src = (Surface){
+        .pixels = buffer,
+        .width = 3,
+        .height = 1,
+        .format = &FORMAT_ARGB8888
+    };
+
+    SurfaceBlit(dest, src, 0, 0);
+
+    TEST_ASSERT_EQUAL_HEX32_ARRAY(expected, dest.pixels, 3);
 
     SurfaceDestroy(&dest);
 }
