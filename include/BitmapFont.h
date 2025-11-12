@@ -8,3 +8,5 @@ typedef struct BitmapFont {
     int firstChar;
     int lastChar;
 } BitmapFont;
+
+extern const BitmapFont DEFAULT_BITMAP_FONT;
