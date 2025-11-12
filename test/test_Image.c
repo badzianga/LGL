@@ -1,7 +1,7 @@
-#include "unity.h"
 #include "Image.h"
 #include "PixelFormat.h"
 #include "Surface.h"
+#include "unity.h"
 
 void setUp(void) {}
 void tearDown(void) {}

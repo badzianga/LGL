@@ -1,5 +1,6 @@
 #pragma once
 #include <stdbool.h>
+
 #include "Surface.h"
 
 Surface WindowInit(int width, int height, const char* title);

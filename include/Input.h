@@ -1,3 +1,4 @@
+#pragma once
 #include <stdbool.h>
 
 // Based on USB HID Usage Table (https://usb.org/sites/default/files/hut1_4.pdf)

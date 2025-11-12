@@ -1,7 +1,8 @@
+#include <stdlib.h>
+
 #include "PixelFormat.h"
 #include "Surface.h"
 #include "unity.h"
-#include <stdlib.h>
 
 void setUp() {}
 void tearDown() {}

@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+
 #include "Color.h"
 
 typedef struct PixelFormat {

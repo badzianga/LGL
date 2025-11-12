@@ -1,6 +1,5 @@
 #include "PixelFormat.h"
 #include "unity.h"
-#include <stdio.h>
 
 void setUp() {}
 void tearDown() {}

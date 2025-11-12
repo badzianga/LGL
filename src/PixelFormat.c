@@ -1,4 +1,5 @@
 #include <stddef.h>
+
 #include "Color.h"
 #include "PixelFormat.h"
 
