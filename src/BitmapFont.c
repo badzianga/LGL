@@ -1,4 +1,5 @@
 #include "BitmapFont.h"
+#include "PixelFormat.h"
 
 // Based on Thick 8x8 (https://frostyfreeze.itch.io/pixel-bitmap-fonts-png-xml) 
 static const uint8_t defaultBitmapFontData[] = {
@@ -111,3 +112,58 @@ const BitmapFont DEFAULT_BITMAP_FONT = {
     .firstChar = ' ',
     .lastChar = '~',
 };
+
+void DrawCharBitmapFont(Surface surface, int x, int y, char c, const BitmapFont* font, Color color) {
+    if (c < font->firstChar || c > font->lastChar) return;
+
+    const int charIndex = c - font->firstChar;
+    const int cw = font->charWidth;
+    const int ch = font->charHeight;
+    const int bpp = surface.format->bytesPerPixel;
+    const uint32_t pixelColor = ColorToPixel(surface.format, color);
+
+    const uint8_t* glyphData = font->data + charIndex * ((cw * ch + 7) / 8);
+
+    for (int row = 0; row < ch; ++row) {
+        for (int col = 0; col < cw; ++col) {
+            const int bitIndex = row * cw + col;
+            const int byteIndex = bitIndex / 8;
+            const int bit = 7 - (bitIndex % 8);
+
+            if (glyphData[byteIndex] & (1 << bit)) {
+                const int px = x + col;
+                const int py = y + row;
+
+                if (px < 0 || py < 0 || px >= surface.width || py >= surface.height) continue;
+
+                uint8_t* pixel = (uint8_t*)surface.pixels + (py * surface.width + px) * bpp;
+                switch (bpp) {
+                    case 1: {
+                        *pixel = (uint8_t)pixelColor;
+                    } break;
+                    case 2: {
+                        *((uint16_t*)pixel) = (uint16_t)pixelColor;
+                    } break;
+                    case 4: {
+                        *((uint32_t*)pixel) = pixelColor;
+                    } break;
+                }
+            }
+        }
+    }
+}
+
+void DrawTextBitmapFont(Surface surface, int x, int y, const char* text, const BitmapFont* font, Color color) {
+    int cx = x;
+    while (*text) {
+        if (*text == '\n') {
+            y += font->charHeight;
+            cx = x;
+        }
+        else {
+            DrawCharBitmapFont(surface, cx, y, *text, font, color);
+            cx += font->charWidth;
+        }
+        ++text;
+    }
+}

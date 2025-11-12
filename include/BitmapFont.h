@@ -1,6 +1,8 @@
 #pragma once
 #include <stdint.h>
 
+#include "Surface.h"
+
 typedef struct BitmapFont {
     int charWidth;
     int charHeight;
@@ -10,3 +12,6 @@ typedef struct BitmapFont {
 } BitmapFont;
 
 extern const BitmapFont DEFAULT_BITMAP_FONT;
+
+void DrawCharBitmapFont(Surface surface, int x, int y, char c, const BitmapFont* font, Color color);
+void DrawTextBitmapFont(Surface surface, int x, int y, const char* text, const BitmapFont* font, Color color);
