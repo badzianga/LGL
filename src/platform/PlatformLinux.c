@@ -49,7 +49,7 @@ static MouseState mouse = { 0 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
-static LGL_KeyCode MapKeyCode(KeySym sym) {
+static KeyboardKey MapKeyCode(KeySym sym) {
     switch (sym) {
         case XK_Escape:     return KEY_ESCAPE;
         case XK_Return:     return KEY_ENTER;
@@ -84,34 +84,34 @@ static LGL_KeyCode MapKeyCode(KeySym sym) {
     }
 
     if (sym >= XK_a && sym <= XK_z) {
-        return (LGL_KeyCode)(KEY_A + (sym - XK_a));
+        return (KeyboardKey)(KEY_A + (sym - XK_a));
     }
 
     if (sym >= XK_0 && sym <= XK_9) {
-        return (LGL_KeyCode)(KEY_0 + (sym - XK_0));
+        return (KeyboardKey)(KEY_0 + (sym - XK_0));
     }
 
     return KEY_UNKNOWN;
 }
 
-static LGL_MouseButton MapMouseButton(uint32_t xButton) {
+static MouseButton MapMouseButton(uint32_t xButton) {
     switch (xButton) {
         case Button1: return MOUSE_BUTTON_LEFT;
         case Button2: return MOUSE_BUTTON_MIDDLE;
         case Button3: return MOUSE_BUTTON_RIGHT;
-        default: return (LGL_MouseButton)(xButton - 1);
+        default: return (MouseButton)(xButton - 1);
     }
 }
 
-bool IsKeyPressed(LGL_KeyCode key) {
+bool IsKeyPressed(KeyboardKey key) {
     return keys.pressed[key];
 }
 
-bool IsKeyDown(LGL_KeyCode key) {
+bool IsKeyDown(KeyboardKey key) {
     return keys.down[key];
 }
 
-bool IsKeyReleased(LGL_KeyCode key) {
+bool IsKeyReleased(KeyboardKey key) {
     return keys.released[key];
 }
 
@@ -132,15 +132,15 @@ int GetMouseWheelMove() {
     return mouse.wheelMove;
 }
 
-bool IsMouseButtonPressed(LGL_MouseButton button) {
+bool IsMouseButtonPressed(MouseButton button) {
     return mouse.buttons.pressed[button];
 }
 
-bool IsMouseButtonDown(LGL_MouseButton button) {
+bool IsMouseButtonDown(MouseButton button) {
     return mouse.buttons.down[button];
 }
 
-bool IsMouseButtonReleased(LGL_MouseButton button) {
+bool IsMouseButtonReleased(MouseButton button) {
     return mouse.buttons.released[button];
 }
 
@@ -300,7 +300,7 @@ inline static void HandleButtonPressEvent(XEvent event) {
             mouse.wheelMove = -1;
         } break;
     }
-    LGL_MouseButton button = MapMouseButton(event.xbutton.button);
+    MouseButton button = MapMouseButton(event.xbutton.button);
     if (!mouse.buttons.down[button]) {
         mouse.buttons.pressed[button] = true;
     }
@@ -308,7 +308,7 @@ inline static void HandleButtonPressEvent(XEvent event) {
 }
 
 inline static void HandleButtonReleaseEvent(XEvent event) {
-    LGL_MouseButton button = MapMouseButton(event.xbutton.button);
+    MouseButton button = MapMouseButton(event.xbutton.button);
     mouse.buttons.down[button] = false;
     mouse.buttons.released[button] = true;
 }

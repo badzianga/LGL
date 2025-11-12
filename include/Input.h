@@ -1,7 +1,7 @@
 #include <stdbool.h>
 
 // Based on USB HID Usage Table (https://usb.org/sites/default/files/hut1_4.pdf)
-typedef enum {
+typedef enum KeyboardKey {
     KEY_UNKNOWN      = 0x00,
 
     KEY_A            = 0x04,
@@ -96,26 +96,26 @@ typedef enum {
     KEY_RIGHT_SHIFT  = 0xE5,
     KEY_RIGHT_ALT    = 0xE6,
     KEY_RIGHT_META   = 0xE7,
-} LGL_KeyCode;
+} KeyboardKey;
 
 typedef enum MouseButton {
     MOUSE_BUTTON_LEFT   = 0,
     MOUSE_BUTTON_MIDDLE = 1,
     MOUSE_BUTTON_RIGHT  = 2,
-} LGL_MouseButton;
+} MouseButton;
 
-bool IsKeyPressed(LGL_KeyCode key);
-bool IsKeyDown(LGL_KeyCode key);
-bool IsKeyReleased(LGL_KeyCode key);
+bool IsKeyPressed(KeyboardKey key);
+bool IsKeyDown(KeyboardKey key);
+bool IsKeyReleased(KeyboardKey key);
 
 int GetMouseX();
 int GetMouseY();
 void GetMousePosition(int* x, int* y);
 int GetMouseWheelMove();
 
-bool IsMouseButtonPressed(LGL_MouseButton button);
-bool IsMouseButtonDown(LGL_MouseButton button);
-bool IsMouseButtonReleased(LGL_MouseButton button);
+bool IsMouseButtonPressed(MouseButton button);
+bool IsMouseButtonDown(MouseButton button);
+bool IsMouseButtonReleased(MouseButton button);
 
 void SetMousePosition(int x, int y);
 void ShowCursor();
