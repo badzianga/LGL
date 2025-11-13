@@ -173,7 +173,7 @@ Color PixelToColor(const PixelFormat* format, uint32_t pixel) {
     color.r = ((pixel & format->rMask) >> format->rShift) << format->rLoss;
     color.g = ((pixel & format->gMask) >> format->gShift) << format->gLoss;
     color.b = ((pixel & format->bMask) >> format->bShift) << format->bLoss;
-    color.a = ((pixel & format->aMask) >> format->aShift) << format->aLoss;
+    color.a = (format->aMask == 0) ? 255 : ((pixel & format->aMask) >> format->aShift) << format->aLoss;
 
     return color;
 }

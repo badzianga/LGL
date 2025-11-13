@@ -99,7 +99,7 @@ void test_PixelToColorShouldProperlyConvertFromBGRA8888() {
 }
 
 void test_PixelToColorShouldProperlyConvertFromRGB565() {
-    const Color expected = { 0xA8, 0xB8, 0xC8, 0x00 };
+    const Color expected = { 0xA8, 0xB8, 0xC8, 0xFF };
     const uint32_t pixel = 0xADD9;
     const Color actual = PixelToColor(&FORMAT_RGB565, pixel);
 
@@ -108,7 +108,7 @@ void test_PixelToColorShouldProperlyConvertFromRGB565() {
 }
 
 void test_PixelToColorShouldProperlyConvertFromBGR565() {
-    const Color expected = { 0xA8, 0xB8, 0xC8, 0x00 };
+    const Color expected = { 0xA8, 0xB8, 0xC8, 0xFF };
     const uint32_t pixel = 0xCDD5;
     const Color actual = PixelToColor(&FORMAT_BGR565, pixel);
 
@@ -116,7 +116,7 @@ void test_PixelToColorShouldProperlyConvertFromBGR565() {
 }
 
 void test_PixelToColorShouldProperlyConvertFromRGB332() {
-    const Color expected = { 0xA0, 0xA0, 0xC0, 0x00 };
+    const Color expected = { 0xA0, 0xA0, 0xC0, 0xFF };
     const uint32_t pixel = 0xB7;
     const Color actual = PixelToColor(&FORMAT_RGB332, pixel);
 
@@ -124,7 +124,7 @@ void test_PixelToColorShouldProperlyConvertFromRGB332() {
 }
 
 void test_PixelToColorShouldProperlyConvertFromBGR233() {
-    const Color expected = { 0xA0, 0xA0, 0xC0, 0x00 };
+    const Color expected = { 0xA0, 0xA0, 0xC0, 0xFF };
     const uint32_t pixel = 0xED;
     const Color actual = PixelToColor(&FORMAT_BGR233, pixel);
 
