@@ -9,6 +9,7 @@
 
 typedef struct Platform {
     HWND hwnd;
+    BITMAPINFO bmpInfo;
     int shouldClose;
     Surface surface;
 } Platform;
@@ -18,6 +19,7 @@ static Platform platform = { 0 };
 extern int main(int argc, char** argv);
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow) {
+    (void)hInstance,(void)hPrevInstance, (void)pCmdLine, (void)nCmdShow;
     return main(__argc, __argv);
 }
 
@@ -139,7 +141,13 @@ Surface WindowInit(int width, int height, const char* title) {
     platform.surface = SurfaceCreate(width, height, &FORMAT_ARGB8888);
 
     ShowWindow(platform.hwnd, SW_SHOW);
-    UpdateWindow(platform.hwnd);
+
+    platform.bmpInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    platform.bmpInfo.bmiHeader.biWidth = width;
+    platform.bmpInfo.bmiHeader.biHeight = -height;
+    platform.bmpInfo.bmiHeader.biPlanes = 1;
+    platform.bmpInfo.bmiHeader.biBitCount = 32;
+    platform.bmpInfo.bmiHeader.biCompression = BI_RGB;
 
     return platform.surface;
 }
@@ -173,7 +181,18 @@ void WindowBeginFrame() {
 }
 
 void WindowEndFrame() {
-    assert(0 && "not implemented");
+    const HDC dc = GetDC(platform.hwnd);
+
+    StretchDIBits(dc,
+        0, 0, platform.surface.width, platform.surface.height,
+        0, 0, platform.surface.width, platform.surface.height,
+        platform.surface.pixels,
+        &platform.bmpInfo,
+        DIB_RGB_COLORS,
+        SRCCOPY
+    );
+
+    ReleaseDC(platform.hwnd, dc);
 }
 
 void WindowSetTargetFPS(int fps) {
