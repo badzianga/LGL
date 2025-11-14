@@ -116,12 +116,18 @@ Surface WindowInit(int width, int height, const char* title) {
     RegisterClass(&wc);
 
     wchar_t* wTitle = MakeWideTitle(title);
+
+    RECT rect = { 0, 0, width, height };
+    AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
+    const int winWidth = rect.right - rect.left;
+    const int winHeight = rect.bottom - rect.top;
+
     platform.hwnd = CreateWindow(
         wc.lpszClassName,
         wTitle,
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT,
-        width, height,
+        winWidth, winHeight,
         NULL, NULL, hInstance, NULL
     );
     free(wTitle);
