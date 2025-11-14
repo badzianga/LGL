@@ -84,12 +84,3 @@ void test_ConstantWhiteShouldBeProperlyDefined() {
     TEST_ASSERT_EQUAL(255, color.b);
     TEST_ASSERT_EQUAL(255, color.a);
 }
-
-void test_ConstantTransparentShouldBeProperlyDefined() {
-    Color color = TRANSPARENT;
-
-    TEST_ASSERT_EQUAL(  0, color.r);
-    TEST_ASSERT_EQUAL(  0, color.g);
-    TEST_ASSERT_EQUAL(  0, color.b);
-    TEST_ASSERT_EQUAL(  0, color.a);
-}

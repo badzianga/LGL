@@ -167,7 +167,7 @@ uint32_t ColorToPixel(const PixelFormat* format, Color color) {
 }
 
 Color PixelToColor(const PixelFormat* format, uint32_t pixel) {
-    if (format == NULL) return TRANSPARENT;
+    if (format == NULL) return (Color){ 0 };
 
     Color color;
     color.r = ((pixel & format->rMask) >> format->rShift) << format->rLoss;

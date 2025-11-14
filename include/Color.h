@@ -16,4 +16,3 @@ typedef struct Color {
 #define YELLOW      (Color){ 0xFF, 0xFF, 0x00, 0xFF }
 #define BLACK       (Color){ 0x00, 0x00, 0x00, 0xFF }
 #define WHITE       (Color){ 0xFF, 0xFF, 0xFF, 0xFF }
-#define TRANSPARENT (Color){ 0 }
