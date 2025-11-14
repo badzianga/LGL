@@ -18,7 +18,7 @@ add_library(LGL STATIC
         ${SRC_FILES}
         ${PLATFORM_FILE}
 )
-
+target_link_libraries(LGL PUBLIC Winmm)
 target_include_directories(LGL PUBLIC
         include external
 )
