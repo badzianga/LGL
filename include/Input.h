@@ -119,6 +119,6 @@ bool IsMouseButtonDown(MouseButton button);
 bool IsMouseButtonReleased(MouseButton button);
 
 void SetMousePosition(int x, int y);
-void ShowCursor();
-void HideCursor();
+void CursorShow();
+void CursorHide();
 bool IsCursorHidden();

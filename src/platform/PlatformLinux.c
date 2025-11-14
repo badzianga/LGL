@@ -155,7 +155,7 @@ void SetMousePosition(int x, int y) {
     mouse.y = y;
 }
 
-void ShowCursor() {
+void CursorShow() {
     if (!mouse.cursorHidden) return;
     XUndefineCursor(platform.display, platform.window);
     XFreeCursor(platform.display, mouse.invisibleCursor);
@@ -163,7 +163,7 @@ void ShowCursor() {
     mouse.cursorHidden = false;
 }
 
-void HideCursor() {
+void CursorHide() {
     if (mouse.cursorHidden) return;
 
     Pixmap pixmap;
