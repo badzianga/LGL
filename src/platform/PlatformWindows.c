@@ -19,8 +19,8 @@ typedef struct TimeHandling {
     LARGE_INTEGER startTime;
     LARGE_INTEGER lastFrameTime;
 
-    float frameTime;
     double time;
+    float frameTime;
     int targetFPS;
     double targetFrameTime;
 } TimeHandling;
