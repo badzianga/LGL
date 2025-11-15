@@ -75,7 +75,6 @@ typedef enum KeyboardKey {
     KEY_F11           = 0x44,
     KEY_F12           = 0x45,
 
-    KEY_PRINT_SCREEN  = 0x46,
     KEY_SCROLL_LOCK   = 0x47,
     KEY_PAUSE         = 0x48,
     KEY_INSERT        = 0x49,
