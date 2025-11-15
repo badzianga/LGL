@@ -25,8 +25,13 @@ typedef struct TimeHandling {
     double targetFrameTime;
 } TimeHandling;
 
+typedef struct MouseState {
+    bool cursorHidden;
+} MouseState;
+
 static Platform platform = { 0 };
 static TimeHandling timeHandling = { 0 };
+static MouseState mouse = { 0 };
 
 extern int main(int argc, char** argv);
 
@@ -98,15 +103,19 @@ void SetMousePosition(int x, int y) {
 }
 
 void CursorShow() {
-    assert(0 && "not implemented");
+    if (!mouse.cursorHidden) return;
+    while (ShowCursor(TRUE) < 0) {}
+    mouse.cursorHidden = false;
 }
 
 void CursorHide() {
-    assert(0 && "not implemented");
+    if (mouse.cursorHidden) return;
+    while (ShowCursor(FALSE) >= 0) {}
+    mouse.cursorHidden = true;
 }
 
 bool IsCursorHidden() {
-    assert(0 && "not implemented");
+    return mouse.cursorHidden;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
