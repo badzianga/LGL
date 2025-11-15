@@ -22,6 +22,13 @@ typedef struct Platform {
     GC gc;
 } Platform;
 
+typedef struct TimeHandling {
+    double targetFrameTime;
+    struct timespec lastFrameTime;
+    double deltaTime;
+    struct timespec startTime;
+} TimeHandling;
+
 typedef struct KeyboardState {
     bool down[MAX_KEYS];
     bool pressed[MAX_KEYS];
@@ -45,6 +52,7 @@ typedef struct MouseState {
 } MouseState;
 
 static Platform platform = { 0 };
+static TimeHandling timeHandling = { 0 };
 static KeyboardState keys = { 0 };
 static MouseState mouse = { 0 };
 
@@ -172,7 +180,7 @@ static MouseButton MapMouseButton(uint32_t xButton) {
         case Button1: return MOUSE_BUTTON_LEFT;
         case Button2: return MOUSE_BUTTON_MIDDLE;
         case Button3: return MOUSE_BUTTON_RIGHT;
-        default: return (MouseButton)(xButton - 1);
+        default: return xButton - 1;
     }
 }
 
@@ -197,8 +205,8 @@ int GetMouseY() {
 }
 
 void GetMousePosition(int* x, int* y) {
-    *x = mouse.x;
-    *y = mouse.y;
+    if (x) *x = mouse.x;
+    if (y) *y = mouse.y;
 }
 
 int GetMouseWheelMove() {
@@ -218,8 +226,8 @@ bool IsMouseButtonReleased(MouseButton button) {
 }
 
 void SetMousePosition(int x, int y) {
-    x = x < 0 ? 0 : (x >= platform.surface.width ? platform.surface.width - 1 : x);
-    y = y < 0 ? 0 : (y >= platform.surface.height ? platform.surface.height - 1 : y);
+    x = x < 0 ? 0 : x >= platform.surface.width ? platform.surface.width - 1 : x;
+    y = y < 0 ? 0 : y >= platform.surface.height ? platform.surface.height - 1 : y;
 
     XWarpPointer(platform.display, None, platform.window, 0, 0, 0, 0, x, y);
     XFlush(platform.display);
@@ -238,11 +246,10 @@ void CursorShow() {
 void CursorHide() {
     if (mouse.cursorHidden) return;
 
-    Pixmap pixmap;
     XColor black = { 0 };
     static char noData[8] = { 0 };
 
-    pixmap = XCreateBitmapFromData(platform.display, platform.window, noData, 8, 8);
+    const Pixmap pixmap = XCreateBitmapFromData(platform.display, platform.window, noData, 8, 8);
     mouse.invisibleCursor = XCreatePixmapCursor(platform.display, pixmap, pixmap, &black, &black, 0, 0);
     XDefineCursor(platform.display, platform.window, mouse.invisibleCursor);
     XFreePixmap(platform.display, pixmap);
@@ -327,22 +334,22 @@ void WindowSetTitle(const char* title) {
     XStoreName(platform.display, platform.window, title);
 }
 
-inline static void HandleClientMessageEvent(XEvent event) {
+static void HandleClientMessageEvent(XEvent event) {
     if ((Atom)event.xclient.data.l[0] == platform.wmDeleteWindow) {
         platform.shouldClose = 1;
     }
 }
 
-inline static void HandleKeyPressEvent(XEvent event) {
-    KeySym sym = XLookupKeysym(&event.xkey, 0);
-    KeyCode key = MapKeyCode(sym);
+static void HandleKeyPressEvent(XEvent event) {
+    const KeySym sym = XLookupKeysym(&event.xkey, 0);
+    const KeyCode key = MapKeyCode(sym);
     if (key == KEY_UNKNOWN) return;
 
     if (!keys.down[key]) keys.pressed[key] = true;
     keys.down[key] = true;
 }
 
-inline static void HandleKeyReleaseEvent(XEvent event) {
+static void HandleKeyReleaseEvent(XEvent event) {
     // check autorepeat
     if (XEventsQueued(platform.display, QueuedAfterReading)) {
         XEvent nextEvent;
@@ -356,22 +363,23 @@ inline static void HandleKeyReleaseEvent(XEvent event) {
         }
     }
 
-    KeySym sym = XLookupKeysym(&event.xkey, 0);
-    KeyCode key = MapKeyCode(sym);
+    const KeySym sym = XLookupKeysym(&event.xkey, 0);
+    const KeyCode key = MapKeyCode(sym);
     if (key == KEY_UNKNOWN) return;
 
     keys.down[key] = false;
     keys.released[key] = true;
 }
 
-inline static void HandleButtonPressEvent(XEvent event) {
+static void HandleButtonPressEvent(XEvent event) {
     switch (event.xbutton.button) {
         case Button4: {
-            mouse.wheelMove = 1;
+            ++mouse.wheelMove;
         } break;
         case Button5: {
-            mouse.wheelMove = -1;
+            --mouse.wheelMove;
         } break;
+        default: break;
     }
     MouseButton button = MapMouseButton(event.xbutton.button);
     if (!mouse.buttons.down[button]) {
@@ -380,13 +388,13 @@ inline static void HandleButtonPressEvent(XEvent event) {
     mouse.buttons.down[button] = true;
 }
 
-inline static void HandleButtonReleaseEvent(XEvent event) {
+static void HandleButtonReleaseEvent(XEvent event) {
     MouseButton button = MapMouseButton(event.xbutton.button);
     mouse.buttons.down[button] = false;
     mouse.buttons.released[button] = true;
 }
 
-inline static void HandleMouseMotionEvent(XEvent event) {
+static void HandleMouseMotionEvent(XEvent event) {
     const int x = event.xmotion.x;
     const int y = event.xmotion.y;
     
@@ -426,6 +434,7 @@ void WindowBeginFrame() {
             case ClientMessage: {
                 HandleClientMessageEvent(event);
             } break;
+            default: break;
         }
     }
 }
@@ -449,16 +458,7 @@ void WindowEndFrame() {
 
 // --------------------------------------------------------------------------------------------------------------------
 
-typedef struct TimeHandling {
-    double targetFrameTime;
-    struct timespec lastFrameTime;
-    double deltaTime;
-    struct timespec startTime;
-} TimeHandling;
-
-static TimeHandling timeHandling = { 0 };
-
-inline static double TimespecToSeconds(struct timespec t) {
+static double TimespecToSeconds(struct timespec t) {
     return (double)t.tv_sec + (double)t.tv_nsec / 1e9;
 }
 
@@ -490,11 +490,11 @@ static void FrameTick(void) {
     clock_gettime(CLOCK_MONOTONIC, &now);
 
     double current = TimespecToSeconds(now);
-    double previous = TimespecToSeconds(timeHandling.lastFrameTime);
+    const double previous = TimespecToSeconds(timeHandling.lastFrameTime);
     timeHandling.deltaTime = current - previous;
 
     if (timeHandling.targetFrameTime > 0.0 && timeHandling.deltaTime < timeHandling.targetFrameTime) {
-        double sleepTime = timeHandling.targetFrameTime - timeHandling.deltaTime;
+        const double sleepTime = timeHandling.targetFrameTime - timeHandling.deltaTime;
         if (sleepTime > 0.0) {
             usleep((useconds_t)(sleepTime * 1e6));
         }
