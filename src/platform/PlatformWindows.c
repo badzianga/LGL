@@ -300,6 +300,9 @@ bool IsMouseButtonReleased(MouseButton button) {
 }
 
 void SetMousePosition(int x, int y) {
+    x = x < 0 ? 0 : x >= platform.surface.width ? platform.surface.width - 1 : x;
+    y = y < 0 ? 0 : y >= platform.surface.height ? platform.surface.height - 1 : y;
+
     POINT pt = { x, y };
     ClientToScreen(platform.hwnd, &pt);
     SetCursorPos(pt.x, pt.y);
