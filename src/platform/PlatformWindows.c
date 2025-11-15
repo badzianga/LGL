@@ -8,6 +8,7 @@
 #include "Window.h"
 
 #define MAX_KEYS 256
+#define MAX_MOUSE_BUTTONS 8
 
 typedef struct Platform {
     HWND hwnd;
@@ -34,7 +35,18 @@ typedef struct KeyboardState {
 } KeyboardState;
 
 typedef struct MouseState {
+    struct {
+        bool down[MAX_MOUSE_BUTTONS];
+        bool pressed[MAX_MOUSE_BUTTONS];
+        bool released[MAX_MOUSE_BUTTONS];
+    } buttons;
+
+    int x;
+    int y;
+
     bool cursorHidden;
+
+    char wheelMove;
 } MouseState;
 
 static Platform platform = { 0 };
@@ -74,6 +86,47 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             const KeyboardKey key = MapKeyCode(wParam, lParam);
             keys.down[key] = false;
             keys.released[key] = true;
+            return 0;
+        }
+        case WM_MOUSEMOVE: {
+            mouse.x = LOWORD(lParam);
+            mouse.y = HIWORD(lParam);
+            return 0;
+        }
+        case WM_LBUTTONDOWN: {
+            mouse.buttons.down[MOUSE_BUTTON_LEFT] = true;
+            mouse.buttons.pressed[MOUSE_BUTTON_LEFT] = true;
+            return 0;
+        }
+        case WM_LBUTTONUP: {
+            mouse.buttons.down[MOUSE_BUTTON_LEFT] = false;
+            mouse.buttons.released[MOUSE_BUTTON_LEFT] = true;
+            return 0;
+        }
+        case WM_RBUTTONDOWN: {
+            mouse.buttons.down[MOUSE_BUTTON_RIGHT] = true;
+            mouse.buttons.pressed[MOUSE_BUTTON_RIGHT] = true;
+            return 0;
+        }
+        case WM_RBUTTONUP: {
+            mouse.buttons.down[MOUSE_BUTTON_RIGHT] = false;
+            mouse.buttons.released[MOUSE_BUTTON_RIGHT] = true;
+            return 0;
+        }
+        case WM_MBUTTONDOWN: {
+            mouse.buttons.down[MOUSE_BUTTON_MIDDLE] = true;
+            mouse.buttons.pressed[MOUSE_BUTTON_MIDDLE] = true;
+            return 0;
+        }
+        case WM_MBUTTONUP: {
+            mouse.buttons.down[MOUSE_BUTTON_MIDDLE] = false;
+            mouse.buttons.released[MOUSE_BUTTON_MIDDLE] = true;
+            return 0;
+        }
+        case WM_MOUSEWHEEL: {
+            SHORT delta = GET_WHEEL_DELTA_WPARAM(wParam);
+            if (delta > 0) mouse.wheelMove++;
+            else if (delta < 0) mouse.wheelMove--;
             return 0;
         }
         default: {
@@ -218,35 +271,41 @@ bool IsKeyReleased(KeyboardKey key) {
 }
 
 int GetMouseX() {
-    return 0;
+    return mouse.x;
 }
 
 int GetMouseY() {
-    return 0;
+    return mouse.y;
 }
 
 void GetMousePosition(int* x, int* y) {
-    assert(0 && "not implemented");
+    if (x) *x = mouse.x;
+    if (y) *y = mouse.y;
 }
 
 int GetMouseWheelMove() {
-    assert(0 && "not implemented");
+    return mouse.wheelMove;
 }
 
 bool IsMouseButtonPressed(MouseButton button) {
-    assert(0 && "not implemented");
+    return mouse.buttons.pressed[button];
 }
 
 bool IsMouseButtonDown(MouseButton button) {
-    assert(0 && "not implemented");
+    return mouse.buttons.down[button];
 }
 
 bool IsMouseButtonReleased(MouseButton button) {
-    assert(0 && "not implemented");
+    return mouse.buttons.released[button];
 }
 
 void SetMousePosition(int x, int y) {
-    assert(0 && "not implemented");
+    POINT pt = { x, y };
+    ClientToScreen(platform.hwnd, &pt);
+    SetCursorPos(pt.x, pt.y);
+
+    mouse.x = pt.x;
+    mouse.y = pt.y;
 }
 
 void CursorShow() {
@@ -349,6 +408,11 @@ void WindowSetTitle(const char* title) {
 void WindowBeginFrame() {
     memset(keys.pressed, 0, sizeof(keys.pressed));
     memset(keys.released, 0, sizeof(keys.released));
+
+    memset(mouse.buttons.pressed, 0, sizeof(mouse.buttons.pressed));
+    memset(mouse.buttons.released, 0, sizeof(mouse.buttons.released));
+
+    mouse.wheelMove = 0;
 
     MSG msg;
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
