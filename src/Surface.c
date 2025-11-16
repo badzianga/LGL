@@ -128,19 +128,24 @@ static void BlitSameFormatA(Surface dest, Surface src, int x, int y) {
             }
             const Color srcColor = PixelToColor(src.format, srcPixel);
             if (srcColor.a == 0) continue;
-            // TODO: don't blend when srcColor.a == 255
 
             const uint8_t a = srcColor.a;
-            const uint8_t invA = 255 - a;
+            uint32_t outColor = 0;
+            if (a != 255) {
+                const uint8_t invA = 255 - a;
 
-            const Color out = {
-                .r = (srcColor.r * a + dstColor.r * invA) / 255,
-                .g = (srcColor.g * a + dstColor.g * invA) / 255,
-                .b = (srcColor.b * a + dstColor.b * invA) / 255,
-                .a = 255
-                // .a = (srcColor.a + dstColor.a * (255 - srcColor.a) / 255)
-            };
-            const uint32_t outColor = ColorToPixel(src.format, out);
+                const Color out = {
+                    .r = (srcColor.r * a + dstColor.r * invA) / 255,
+                    .g = (srcColor.g * a + dstColor.g * invA) / 255,
+                    .b = (srcColor.b * a + dstColor.b * invA) / 255,
+                    .a = 255
+                    // .a = (srcColor.a + dstColor.a * (255 - srcColor.a) / 255)
+                };
+                outColor = ColorToPixel(src.format, out);
+            }
+            else {
+                outColor = ColorToPixel(src.format, srcColor);
+            }
 
             uint8_t* destPixel = (uint8_t*)dest.pixels + (dy * dest.width + dx) * bpp;
 
@@ -214,7 +219,6 @@ static void BlitDifferentFormatA(Surface dest, Surface src, int x, int y) {
             }
             const Color srcColor = PixelToColor(src.format, srcPixelValue);
             if (srcColor.a == 0) continue;
-            // TODO: don't blend when srcColor.a == 255
 
             uint8_t* destPixel = (uint8_t*)dest.pixels + (dy * dest.width + dx) * destBpp;
             Color destColor = { 0 };
@@ -232,16 +236,22 @@ static void BlitDifferentFormatA(Surface dest, Surface src, int x, int y) {
             }
 
             const uint8_t a = srcColor.a;
-            const uint8_t invA = 255 - a;
+            uint32_t outColor = 0;
+            if (a != 255) {
+                const uint8_t invA = 255 - a;
 
-            const Color out = {
-                .r = (srcColor.r * a + destColor.r * invA) / 255,
-                .g = (srcColor.g * a + destColor.g * invA) / 255,
-                .b = (srcColor.b * a + destColor.b * invA) / 255,
-                .a = 255
-                // .a = (srcColor.a + destColor.a * (255 - srcColor.a) / 255)
-            };
-            const uint32_t outColor = ColorToPixel(dest.format, out);
+                const Color out = {
+                    .r = (srcColor.r * a + destColor.r * invA) / 255,
+                    .g = (srcColor.g * a + destColor.g * invA) / 255,
+                    .b = (srcColor.b * a + destColor.b * invA) / 255,
+                    .a = 255
+                    // .a = (srcColor.a + destColor.a * (255 - srcColor.a) / 255)
+                };
+                outColor = ColorToPixel(dest.format, out);
+            }
+            else {
+                outColor = ColorToPixel(dest.format, srcColor);
+            }
 
             uint8_t* dstPixel = (uint8_t*)dest.pixels + (dy * dest.width + dx) * destBpp;
 
