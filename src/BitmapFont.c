@@ -115,6 +115,7 @@ const BitmapFont DEFAULT_BITMAP_FONT = {
 
 void DrawCharBitmapFont(Surface surface, int x, int y, char c, const BitmapFont* font, Color color) {
     if (c < font->firstChar || c > font->lastChar) return;
+    if (color.a == 0) return;
 
     const uint32_t colorValue = ColorToPixel(surface.format, color);
     const int charIndex = c - font->firstChar;

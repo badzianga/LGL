@@ -138,6 +138,7 @@ void FillRect(Surface surface, int x, int y, int w, int h, Color color) {
                 FillRect1(surface, x, y, w, h, (uint8_t)pixelColor);
             }
             else {
+                if (color.a == 0) return;
                 FillRect1a(surface, x, y, w, h, pixelColor);
             }
         } break;
@@ -146,6 +147,7 @@ void FillRect(Surface surface, int x, int y, int w, int h, Color color) {
                 FillRect2(surface, x, y, w, h, (uint16_t)pixelColor);
             }
             else {
+                if (color.a == 0) return;
                 FillRect2a(surface, x, y, w, h, pixelColor);
             }
         } break;
@@ -154,6 +156,7 @@ void FillRect(Surface surface, int x, int y, int w, int h, Color color) {
                 FillRect4(surface, x, y, w, h, pixelColor);
             }
             else {
+                if (color.a == 0) return;
                 FillRect4a(surface, x, y, w, h, pixelColor);
             }
         } break;

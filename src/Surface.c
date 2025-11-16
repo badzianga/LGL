@@ -127,6 +127,8 @@ static void BlitSameFormatA(Surface dest, Surface src, int x, int y) {
                 default: break;
             }
             const Color srcColor = PixelToColor(src.format, srcPixel);
+            if (srcColor.a == 0) continue;
+            // TODO: don't blend when srcColor.a == 255
 
             const uint8_t a = srcColor.a;
             const uint8_t invA = 255 - a;
@@ -211,6 +213,8 @@ static void BlitDifferentFormatA(Surface dest, Surface src, int x, int y) {
                 default: break;
             }
             const Color srcColor = PixelToColor(src.format, srcPixelValue);
+            if (srcColor.a == 0) continue;
+            // TODO: don't blend when srcColor.a == 255
 
             uint8_t* destPixel = (uint8_t*)dest.pixels + (dy * dest.width + dx) * destBpp;
             Color destColor = { 0 };
