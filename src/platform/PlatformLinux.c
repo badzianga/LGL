@@ -150,26 +150,38 @@ static KeyboardKey MapKeyCode(KeySym sym) {
         case XK_KP_Subtract:  return KEY_KP_MINUS;
         case XK_KP_Add:       return KEY_KP_PLUS;
         case XK_KP_Enter:     return KEY_KP_ENTER;
+        case XK_KP_End:
         case XK_KP_1:         return KEY_KP_1;
+        case XK_KP_Down:
         case XK_KP_2:         return KEY_KP_2;
+        case XK_KP_Page_Down:
         case XK_KP_3:         return KEY_KP_3;
+        case XK_KP_Left:
         case XK_KP_4:         return KEY_KP_4;
+        case XK_KP_Begin:
         case XK_KP_5:         return KEY_KP_5;
+        case XK_KP_Right:
         case XK_KP_6:         return KEY_KP_6;
+        case XK_KP_Home:
         case XK_KP_7:         return KEY_KP_7;
+        case XK_KP_Up:
         case XK_KP_8:         return KEY_KP_8;
+        case XK_KP_Page_Up:
         case XK_KP_9:         return KEY_KP_9;
+        case XK_KP_Insert:
         case XK_KP_0:         return KEY_KP_0;
+        case XK_KP_Delete:
         case XK_KP_Decimal:   return KEY_KP_PERIOD;
 
         case XK_Control_L:    return KEY_LEFT_CTRL;
         case XK_Shift_L:      return KEY_LEFT_SHIFT;
         case XK_Alt_L:        return KEY_LEFT_ALT;
-        case XK_Super_L:      return KEY_LEFT_SUPER;
+        case XK_Meta_L:       return KEY_LEFT_SUPER;
         case XK_Control_R:    return KEY_RIGHT_CTRL;
         case XK_Shift_R:      return KEY_RIGHT_SHIFT;
+        case XK_ISO_Level3_Shift:
         case XK_Alt_R:        return KEY_RIGHT_ALT;
-        case XK_Super_R:      return KEY_RIGHT_SUPER;
+        case XK_Meta_R:       return KEY_RIGHT_SUPER;
 
         default:              return KEY_UNKNOWN;
     }
@@ -342,7 +354,7 @@ static void HandleClientMessageEvent(XEvent event) {
 
 static void HandleKeyPressEvent(XEvent event) {
     const KeySym sym = XLookupKeysym(&event.xkey, 0);
-    const KeyCode key = MapKeyCode(sym);
+    const KeyboardKey key = MapKeyCode(sym);
     if (key == KEY_UNKNOWN) return;
 
     if (!keys.down[key]) keys.pressed[key] = true;
