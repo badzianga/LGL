@@ -116,37 +116,87 @@ const BitmapFont DEFAULT_BITMAP_FONT = {
 void DrawCharBitmapFont(Surface surface, int x, int y, char c, const BitmapFont* font, Color color) {
     if (c < font->firstChar || c > font->lastChar) return;
 
+    const uint32_t colorValue = ColorToPixel(surface.format, color);
     const int charIndex = c - font->firstChar;
     const int cw = font->charWidth;
     const int ch = font->charHeight;
     const int bpp = surface.format->bytesPerPixel;
-    const uint32_t pixelColor = ColorToPixel(surface.format, color);
 
     const uint8_t* glyphData = font->data + charIndex * ((cw * ch + 7) / 8);
 
-    for (int row = 0; row < ch; ++row) {
-        for (int col = 0; col < cw; ++col) {
-            const int bitIndex = row * cw + col;
-            const int byteIndex = bitIndex / 8;
-            const int bit = 7 - (bitIndex % 8);
+    if (surface.format->aMask != 0 && color.a != 255) {  // draw character with alpha blending
+        for (int row = 0; row < ch; ++row) {
+            for (int col = 0; col < cw; ++col) {
+                const int bitIndex = row * cw + col;
+                const int byteIndex = bitIndex / 8;
+                const int bit = 7 - (bitIndex % 8);
 
-            if (glyphData[byteIndex] & (1 << bit)) {
-                const int px = x + col;
-                const int py = y + row;
+                if (glyphData[byteIndex] & (1 << bit)) {
+                    const int px = x + col;
+                    const int py = y + row;
 
-                if (px < 0 || py < 0 || px >= surface.width || py >= surface.height) continue;
+                    if (px < 0 || py < 0 || px >= surface.width || py >= surface.height) continue;
 
-                uint8_t* pixel = (uint8_t*)surface.pixels + (py * surface.width + px) * bpp;
-                switch (bpp) {
-                    case 1: {
-                        *pixel = (uint8_t)pixelColor;
-                    } break;
-                    case 2: {
-                        *((uint16_t*)pixel) = (uint16_t)pixelColor;
-                    } break;
-                    case 4: {
-                        *((uint32_t*)pixel) = pixelColor;
-                    } break;
+                    uint8_t* pixel = (uint8_t*)surface.pixels + (py * surface.width + px) * bpp;
+                    Color pixelColor = { 0 };
+                    switch (bpp) {
+                        case 1: {
+                            pixelColor = PixelToColor(surface.format, *pixel);
+                        } break;
+                        case 2: {
+                            pixelColor = PixelToColor(surface.format, *(uint16_t*)pixel);
+                        } break;
+                        case 4: {
+                            pixelColor = PixelToColor(surface.format, *(uint32_t*)pixel);
+                        } break;
+                        default: break;
+                    }
+
+                    const uint8_t a = color.a;
+                    const uint8_t invA = 255 - a;
+
+                    const Color out = {
+                        .r = (color.r * a + pixelColor.r * invA) / 255,
+                        .g = (color.g * a + pixelColor.g * invA) / 255,
+                        .b = (color.b * a + pixelColor.b * invA) / 255,
+                        .a = 255
+                        // .a = (srcColor.a + dstColor.a * (255 - srcColor.a) / 255)
+                    };
+                    const uint32_t outColor = ColorToPixel(surface.format, out);
+
+                    for (int b = 0; b < bpp; ++b) {
+                        pixel[b] = ((uint8_t*)&outColor)[b];
+                    }
+                }
+            }
+        }
+    }
+    else {  // draw character casually
+        for (int row = 0; row < ch; ++row) {
+            for (int col = 0; col < cw; ++col) {
+                const int bitIndex = row * cw + col;
+                const int byteIndex = bitIndex / 8;
+                const int bit = 7 - (bitIndex % 8);
+
+                if (glyphData[byteIndex] & (1 << bit)) {
+                    const int px = x + col;
+                    const int py = y + row;
+
+                    if (px < 0 || py < 0 || px >= surface.width || py >= surface.height) continue;
+
+                    uint8_t* pixel = (uint8_t*)surface.pixels + (py * surface.width + px) * bpp;
+                    switch (bpp) {
+                        case 1: {
+                            *pixel = (uint8_t)colorValue;
+                        } break;
+                        case 2: {
+                            *(uint16_t*)pixel = (uint16_t)colorValue;
+                        } break;
+                        case 4: {
+                            *(uint32_t*)pixel = colorValue;
+                        } break;
+                        default: break;
+                    }
                 }
             }
         }
