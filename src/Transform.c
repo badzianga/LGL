@@ -2,7 +2,43 @@
 
 #include "Transform.h"
 
-#define EQ(color1, color2) (*(uint32_t*)&(color1) == *(uint32_t*)&(color2))
+void TransformFlipX(Surface surface) {
+    const uint8_t bpp = surface.format->bytesPerPixel;
+
+    for (int y = 0; y < surface.height; y++) {
+        for (int x = 0; x < surface.width / 2; x++) {
+            const int xEnd = surface.width - x - 1;
+
+            uint8_t* left = (uint8_t*)surface.pixels + (y * surface.width + x) * bpp;
+            uint8_t* right = (uint8_t*)surface.pixels + (y * surface.width + xEnd) * bpp;
+
+            for (int b = 0; b < bpp; ++b) {
+                const uint8_t tmp = left[b];
+                left[b] = right[b];
+                right[b] = tmp;
+            }
+        }
+    }
+}
+
+void TransformFlipY(Surface surface) {
+    const uint8_t bpp = surface.format->bytesPerPixel;
+
+    for (int y = 0; y < surface.height / 2; y++) {
+        const int yEnd = surface.height - y - 1;
+
+        for (int x = 0; x < surface.width; x++) {
+            uint8_t* top = (uint8_t*)surface.pixels + (y * surface.width + x) * bpp;
+            uint8_t* bottom = (uint8_t*)surface.pixels + (yEnd * surface.width + x) * bpp;
+
+            for (int b = 0; b < bpp; ++b) {
+                const uint8_t tmp = top[b];
+                top[b] = bottom[b];
+                bottom[b] = tmp;
+            }
+        }
+    }
+}
 
 // TODO: avoid using sColorArray, write pixels to scaled surface in calculation iteration
 // TODO: separate calculating borders to avoid unnecessary checking for borders in every iteration
@@ -45,6 +81,8 @@ Surface TransformScale2x(Surface original) {
             const Color H = oColorArray[lowerY * original.width +      x];
 
             Color E0, E1, E2, E3;
+
+            #define EQ(color1, color2) (*(uint32_t*)&(color1) == *(uint32_t*)&(color2))
 
             if (!EQ(B, H) && !EQ(D, F)) {
                 E0 = EQ(D, B) ? D : E;
