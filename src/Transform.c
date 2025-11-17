@@ -40,6 +40,44 @@ void TransformFlipY(Surface surface) {
     }
 }
 
+Surface TransformScale(Surface src, int destWidth, int destHeight) {
+    Surface dest = SurfaceCreate(destWidth, destHeight, src.format);
+    const uint8_t bpp = src.format->bytesPerPixel;
+
+    int srcY = 0;
+    int accY = 0;
+
+    for (int y = 0; y < destHeight; ++y) {
+        accY += src.height;
+        while (accY >= dest.height) {
+            accY -= dest.height;
+            ++srcY;
+            if (srcY >= src.height) srcY = src.height - 1;
+        }
+
+        int srcX = 0;
+        int accX = 0;
+
+        for (int x = 0; x < dest.width; ++x) {
+            accX += src.width;
+            while (accX >= dest.width) {
+                accX -= dest.width;
+                ++srcX;
+                if (srcX >= src.width) srcX = src.width - 1;
+            }
+
+            uint8_t* destPixel = (uint8_t*)dest.pixels + (y * destWidth + x) * bpp;
+            const uint8_t* srcPixel = (uint8_t*)src.pixels + (srcY * src.width + srcX) * bpp;
+
+            for (int b = 0; b < bpp; ++b) {
+                destPixel[b] = srcPixel[b];
+            }
+        }
+    }
+
+    return dest;
+}
+
 // TODO: avoid using sColorArray, write pixels to scaled surface in calculation iteration
 // TODO: separate calculating borders to avoid unnecessary checking for borders in every iteration
 Surface TransformScale2x(Surface original) {
