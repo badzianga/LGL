@@ -10,7 +10,7 @@ Surface SurfaceCreate(int width, int height, const PixelFormat* format) {
         return (Surface){ 0 };
     }
 
-    void* pixels = malloc(width * height * format->bytesPerPixel);
+    void* pixels = calloc(width * height, format->bytesPerPixel);
     if (pixels == NULL) {
         return (Surface){ 0 };
     }
