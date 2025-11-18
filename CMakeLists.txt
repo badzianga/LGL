@@ -16,12 +16,14 @@ else ()
     message("Invalid platform")
 endif ()
 
+find_package(Freetype REQUIRED)
+
 add_library(LGL STATIC
         ${SRC_FILES}
         ${PLATFORM_FILE}
 )
-target_link_libraries(LGL PUBLIC ${PLATFORM_LIBS})
-target_include_directories(LGL PUBLIC
+target_link_libraries(LGL PRIVATE ${PLATFORM_LIBS} Freetype::Freetype)
+target_include_directories(LGL PRIVATE
         include external
 )
 
