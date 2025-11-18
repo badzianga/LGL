@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdlib.h>
 
 #include "Transform.h"
@@ -38,6 +39,77 @@ void TransformFlipY(Surface surface) {
             }
         }
     }
+}
+
+Surface TransformRotate(Surface src, float angle) {
+    const uint8_t bpp = src.format->bytesPerPixel;
+
+    float rad = fmodf(angle, 360.f);
+    if (rad < 0) rad += 360.f;
+    rad = rad * (float)M_PI / 180.f;
+
+    const float cosAlpha = cosf(rad);
+    const float sinAlpha = sinf(rad);
+
+    const int w = src.width;
+    const int h = src.height;
+
+    const float hw = (float)w * 0.5f;
+    const float hh = (float)h * 0.5f;
+
+    const float corners[4][2] = {
+        {-hw, -hh},
+        { hw, -hh},
+        { hw,  hh},
+        {-hw,  hh}
+    };
+
+    float minX =  1e30f, minY =  1e30f;
+    float maxX = -1e30f, maxY = -1e30f;
+
+    for (int i = 0; i < 4; i++) {
+        const float x = corners[i][0];
+        const float y = corners[i][1];
+        const float rx = x * cosAlpha - y * sinAlpha;
+        const float ry = x * sinAlpha + y * cosAlpha;
+
+        if (rx < minX) minX = rx;
+        if (rx > maxX) maxX = rx;
+        if (ry < minY) minY = ry;
+        if (ry > maxY) maxY = ry;
+    }
+
+    const int newW = (int)ceilf(maxX - minX);
+    const int newH = (int)ceilf(maxY - minY);
+
+    Surface dst = SurfaceCreate(newW, newH, src.format);
+
+    const float halfNewW = (float)newW * 0.5f;
+    const float halfNewH = (float)newH * 0.5f;
+
+    for (int y = 0; y < newH; y++) {
+        for (int x = 0; x < newW; x++) {
+            const float dx = (float)x - halfNewW;
+            const float dy = (float)y - halfNewH;
+
+            const float sx =  dx * cosAlpha + dy * sinAlpha + hw;
+            const float sy = -dx * sinAlpha + dy * cosAlpha + hh;
+
+            const int isx = (int)floorf(sx + 0.5f);
+            const int isy = (int)floorf(sy + 0.5f);
+
+            if (isx < 0 | isx >= w | isy < 0 | isy >= h) continue;
+
+            uint8_t* dstPixel = (uint8_t*)dst.pixels + (y * dst.width + x) * bpp;
+            const uint8_t* srcPixel = (uint8_t*)src.pixels + (isy * src.width + isx) * bpp;
+
+            for (int b = 0; b < bpp; ++b) {
+                dstPixel[b] = srcPixel[b];
+            }
+        }
+    }
+
+    return dst;
 }
 
 Surface TransformScale(Surface src, int destWidth, int destHeight) {
