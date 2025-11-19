@@ -1,5 +1,11 @@
-#pragma once
+#ifndef LGL_INPUT_H
+#define LGL_INPUT_H
+
 #include <stdbool.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif  // __cplusplus
 
 // Based on USB HID Usage Table (https://usb.org/sites/default/files/hut1_4.pdf)
 typedef enum KeyboardKey {
@@ -140,3 +146,9 @@ void SetMousePosition(int x, int y);
 void CursorShow();
 void CursorHide();
 bool IsCursorHidden();
+
+#ifdef __cplusplus
+}
+#endif  // __cplusplus
+
+#endif // LGL_INPUT_H

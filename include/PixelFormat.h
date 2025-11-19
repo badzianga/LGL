@@ -1,7 +1,13 @@
-#pragma once
+#ifndef LGL_PIXEL_FORMAT_H
+#define LGL_PIXEL_FORMAT_H
+
 #include <stdint.h>
 
 #include "Color.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif  // __cplusplus
 
 typedef struct PixelFormat {
     uint32_t rMask;
@@ -33,3 +39,9 @@ extern const PixelFormat FORMAT_BGR233;
 
 uint32_t ColorToPixel(const PixelFormat* format, Color color);
 Color PixelToColor(const PixelFormat* format, uint32_t pixel);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
+#endif // LGL_PIXEL_FORMAT_H

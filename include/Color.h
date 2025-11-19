@@ -1,5 +1,11 @@
-#pragma once
+#ifndef LGL_COLOR_H
+#define LGL_COLOR_H
+
 #include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif  // __cplusplus
 
 typedef struct Color {
     uint8_t r;
@@ -16,3 +22,9 @@ typedef struct Color {
 #define YELLOW      (Color){ 0xFF, 0xFF, 0x00, 0xFF }
 #define BLACK       (Color){ 0x00, 0x00, 0x00, 0xFF }
 #define WHITE       (Color){ 0xFF, 0xFF, 0xFF, 0xFF }
+
+#ifdef __cplusplus
+}
+#endif  // __cplusplus
+
+#endif // LGL_COLOR_H
