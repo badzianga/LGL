@@ -1,4 +1,5 @@
-#include <ft2build.h>
+#include <harfbuzz/hb.h>
+#include <harfbuzz/hb-ft.h>
 #include FT_FREETYPE_H
 
 #include "Font.h"
@@ -14,28 +15,6 @@ static int EnsureFtLibrary() {
     return 0;
 }
 
-static uint32_t UTF8Decode(const char* s, int* bytesOut) {
-    const unsigned char* us = (const unsigned char*)s;
-    if (us[0] < 0x80) {
-        *bytesOut = 1;
-        return us[0];
-    }
-    if ((us[0] & 0xE0) == 0xC0) {
-        *bytesOut = 2;
-        return ((us[0] & 0x1F) << 6) | (us[1] & 0x3F);
-    }
-    if ((us[0] & 0xF0) == 0xE0) {
-        *bytesOut = 3;
-        return ((us[0] & 0x0F) << 12) | ((us[1] & 0x3F) << 6) | (us[2] & 0x3F);
-    }
-    if ((us[0] & 0xF8) == 0xF0) {
-        *bytesOut = 4;
-        return ((us[0] & 0x07) << 18) | ((us[1] & 0x3F) << 12) | ((us[2] & 0x3F) << 6) | (us[3] & 0x3F);
-    }
-    *bytesOut = 1;
-    return 0xFFFD;
-}
-
 Font FontLoad(const char* path, int pixelSize) {
     if (!path || pixelSize <= 0 || EnsureFtLibrary() != 0) return (Font){ 0 };
 
@@ -49,15 +28,30 @@ Font FontLoad(const char* path, int pixelSize) {
         return (Font){ 0 };
     }
 
-    return (Font) { face, pixelSize };
+    hb_font_t* hbFont = hb_ft_font_create(face, NULL);
+    if (!hbFont) {
+        FT_Done_Face(face);
+        return (Font){ 0 };
+    }
+
+    return (Font) { face, hbFont, pixelSize };
 }
 
 void FontFree(Font* font) {
+    if (font == NULL) return;
+    if (font->hbFont != NULL) {
+        hb_font_destroy(font->hbFont);
+        font->hbFont = NULL;
+    }
     if (font->internal != NULL) {
         FT_Done_Face(font->internal);
         font->internal = NULL;
-        font->size = 0;
     }
+    font->size = 0;
+}
+
+static int ComputeBaselineFromTop(FT_Face face, int topY) {
+    return topY + (face->size != 0 ? (int)(face->size->metrics.ascender >> 6) : 0);
 }
 
 static void BlendPixel(uint8_t* dst, Color color, uint8_t bpp, const PixelFormat* format) {
@@ -78,7 +72,7 @@ static void BlendPixel(uint8_t* dst, Color color, uint8_t bpp, const PixelFormat
     }
 
     const int sa = color.a;
-    const int da = (int)dstColor.a;
+    const int da = dstColor.a;
     const int invSa = 255 - sa;
 
     const Color outColor = {
@@ -108,6 +102,7 @@ static void BlitGlyphToSurface(Surface surface, const FT_Bitmap* bitmap, int dst
     if (dstY < 0) startY = -dstY;
     int endX = bmW;
     int endY = bmH;
+    // TODO: should it be >= ?
     if (dstX + bmW > surface.width) endX = surface.width - dstX;
     if (dstY + bmH > surface.height) endY = surface.height - dstY;
     if (startX >= endX || startY >= endY) return;
@@ -134,36 +129,57 @@ void DrawFontChar(Surface surface, int x, int y, char c, Font* font, Color color
 void DrawFontText(Surface surface, int x, int y, const char* text, Font* font, Color color) {
     if (surface.pixels == NULL || font == NULL || font->internal == NULL) return;
     FT_Face face = font->internal;
+    hb_font_t* hbFont = font->hbFont;
 
-    const int ascender = face->size != 0 && face->size->metrics.ascender != 0 ?
-        (int)(face->size->metrics.ascender >> 6) : font->size;
-    const int baseline = y + ascender;
+    hb_buffer_t* buf = hb_buffer_create();
+    hb_buffer_add_utf8(buf, text, -1, 0, -1);
+    hb_buffer_guess_segment_properties(buf);
+    hb_shape(hbFont, buf, NULL, 0);
 
-    int penX = x;
-    const char* p = text;
-    while (*p) {
-        int bytes;
-        const uint32_t cp = UTF8Decode(p, &bytes);
-        p += bytes;
+    uint32_t glyphCount = 0;
+    hb_glyph_info_t* glyphInfo = hb_buffer_get_glyph_infos(buf, &glyphCount);
+    hb_glyph_position_t* glyphPos = hb_buffer_get_glyph_positions(buf, &glyphCount);
 
-        const FT_UInt glyphIndex = FT_Get_Char_Index(face, cp);
-        if (glyphIndex == 0) {
+    const int baseline = ComputeBaselineFromTop(face, y);
+
+    long penX = x;
+    long penY = baseline;
+
+    for (uint32_t i = 0; i < glyphCount; i++) {
+        const hb_glyph_info_t gi = glyphInfo[i];
+        const hb_glyph_position_t gp = glyphPos[i];
+
+        uint32_t glyphIndex = gi.codepoint;
+
+        const int xOffset = (int)(gp.x_offset >> 6);
+        const int yOffset = (int)(gp.y_offset >> 6);
+        const int xAdvance = (int)(gp.x_advance >> 6);
+        const int yAdvance = (int)(gp.y_advance >> 6);
+
+        if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_DEFAULT)) {
+            penX += xAdvance;
+            penY += yAdvance;
             continue;
         }
 
-        if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_DEFAULT) != 0) continue;
         if (face->glyph->format != FT_GLYPH_FORMAT_BITMAP) {
-            if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL) != 0) continue;
+            if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL)) {
+                penX += xAdvance;
+                penY += yAdvance;
+                continue;
+            }
         }
 
         const FT_Bitmap* bitmap = &face->glyph->bitmap;
-        const int dstX = penX + face->glyph->bitmap_left;
-        const int dstY = baseline - face->glyph->bitmap_top;
+        const int dstX = (int)(penX + xOffset) + face->glyph->bitmap_left;
+        const int dstY = (int)(penY + yOffset) - face->glyph->bitmap_top;
         BlitGlyphToSurface(surface, bitmap, dstX, dstY, color);
 
-        const int adv = (int)(face->glyph->advance.x >> 6);
-        penX += adv;
+        penX += xAdvance;
+        penY += yAdvance;
     }
+
+    hb_buffer_destroy(buf);
 }
 
 void ShutdownFontModule() {

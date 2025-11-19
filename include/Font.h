@@ -3,6 +3,7 @@
 
 typedef struct Font {
     void* internal;
+    void* hbFont;
     int size;
 } Font;
 
