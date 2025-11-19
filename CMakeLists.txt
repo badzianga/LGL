@@ -17,12 +17,13 @@ else ()
 endif ()
 
 find_package(Freetype REQUIRED)
+find_package(harfbuzz REQUIRED)
 
 add_library(LGL STATIC
         ${SRC_FILES}
         ${PLATFORM_FILE}
 )
-target_link_libraries(LGL PRIVATE ${PLATFORM_LIBS} Freetype::Freetype)
+target_link_libraries(LGL PRIVATE ${PLATFORM_LIBS} Freetype::Freetype harfbuzz)
 target_include_directories(LGL PRIVATE
         include external
 )
