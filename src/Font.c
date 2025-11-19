@@ -127,26 +127,8 @@ static void BlitGlyphToSurface(Surface surface, const FT_Bitmap* bitmap, int dst
 }
 
 void DrawFontChar(Surface surface, int x, int y, char c, Font* font, Color color) {
-    if (surface.pixels == NULL || font == NULL || font->internal == NULL) return;
-
-    FT_Face face = font->internal;
-
-    const int ascender = (face->size != 0 && face->size->metrics.ascender != 0) ?
-        (int)(face->size->metrics.ascender >> 6) : font->size;
-    const int baseline = y + ascender;
-
-    const FT_UInt glyphIndex = FT_Get_Char_Index(face, (FT_ULong)(unsigned char)c);
-    if (glyphIndex == 0) return;
-
-    if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_DEFAULT) != 0) return;
-    if (face->glyph->format != FT_GLYPH_FORMAT_BITMAP) {
-        if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL) != 0) return;
-    }
-
-    const FT_Bitmap* bitmap = &face->glyph->bitmap;
-    const int dstX = x + face->glyph->bitmap_left;
-    const int dstY = baseline - face->glyph->bitmap_top;
-    BlitGlyphToSurface(surface, bitmap, dstX, dstY, color);
+    const char s[2] = { c, '\0' };
+    DrawFontText(surface, x, y, s, font, color);
 }
 
 void DrawFontText(Surface surface, int x, int y, const char* text, Font* font, Color color) {
