@@ -4,6 +4,10 @@
 void setUp(void) {}
 void tearDown(void) {}
 
+void test_ColorStructShouldHaveProperSize() {
+    TEST_ASSERT_EQUAL(4, sizeof(Color));
+}
+
 void test_ColorShouldBeConstructedProperly(void) {
     Color color = { 0, 63, 127, 255 };
 
