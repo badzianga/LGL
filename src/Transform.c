@@ -98,7 +98,7 @@ Surface TransformRotate(Surface src, float angle) {
             const int isx = (int)floorf(sx + 0.5f);
             const int isy = (int)floorf(sy + 0.5f);
 
-            if (isx < 0 | isx >= w | isy < 0 | isy >= h) continue;
+            if (isx < 0 || isx >= w || isy < 0 || isy >= h) continue;
 
             uint8_t* dstPixel = (uint8_t*)dst.pixels + (y * dst.width + x) * bpp;
             const uint8_t* srcPixel = (uint8_t*)src.pixels + (isy * src.width + isx) * bpp;
