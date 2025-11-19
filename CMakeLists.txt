@@ -27,7 +27,3 @@ target_link_libraries(LGL PRIVATE ${PLATFORM_LIBS} Freetype::Freetype harfbuzz)
 target_include_directories(LGL PRIVATE
         include external
 )
-
-add_executable(Main main.c)
-target_include_directories(Main PUBLIC include)
-target_link_libraries(Main PUBLIC LGL)
