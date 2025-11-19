@@ -1,0 +1,9 @@
+{
+    "name": "LGL",
+    "description": "Lite Graphics Library",
+    "build": {
+        "includeDir": "include",
+        "srcDir": "src",
+        "srcFilter": ["+<*>", "-<Font.c>", "-<Image.c>", "-<platform/*>"]
+    }
+}
