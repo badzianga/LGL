@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "Color.h"
+#include "FillRect.h"
 #include "PixelFormat.h"
 #include "Surface.h"
 
@@ -79,6 +80,10 @@ Surface SurfaceMakeConverted(Surface surface, const PixelFormat* format) {
         }
     }
     return new;
+}
+
+void SurfaceFill(Surface surface, Color color) {
+    FillRect(surface, 0, 0, surface.width, surface.height, color);
 }
 
 static void BlitSameFormat(Surface dest, Surface src, int x, int y) {
