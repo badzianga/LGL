@@ -1,4 +1,4 @@
-#include <assert.h>
+#include <stdlib.h>
 
 #include "Draw.h"
 #include "FillRect.h"
@@ -36,7 +36,6 @@ void DrawCircle(Surface surface, int x, int y, int r, Color color) {
     }
 }
 
-// TODO: support alpha blending
 static void FillFlatLine(Surface surface, int x1, int x2, int y, uint32_t color) {
     const uint8_t bpp = surface.format->bytesPerPixel;
 
@@ -114,6 +113,7 @@ static void SwapInts(int* a, int* b) {
     *b = temp;
 }
 
+// TODO: support alpha blending
 void DrawTriangle(Surface surface, int x1, int y1, int x2, int y2, int x3, int y3, Color color) {
     SortTrianglePointsAscendingByY(&x1, &y1, &x2, &y2, &x3, &y3);
 
@@ -136,12 +136,82 @@ void DrawTriangle(Surface surface, int x1, int y1, int x2, int y2, int x3, int y
     }
 }
 
+// TODO: support alpha blending
 void DrawLine(Surface surface, int x1, int y1, int x2, int y2, Color color) {
-    (void) surface;
-    (void) x1;
-    (void) y1;
-    (void) x2;
-    (void) y2;
-    (void) color;
-    assert(0 && "TODO: not implemented");
+    const uint8_t bpp = surface.format->bytesPerPixel;
+    const uint32_t pixelColor = ColorToPixel(surface.format, color);
+
+    const int dx = x2 - x1;
+    const int dy = y2 - y1;
+
+    if (dx != 0) {  // non-vertical line
+        if (abs(dx) >= abs(dy)) {  // slope less or equal to 1
+            const int x2Original = x2;
+            if (x1 > x2) SwapInts(&x1, &x2);
+            for (int x = x1; x < x2; ++x) {
+                if (x < 0 || x >= surface.width) continue;
+                const int y = y2 + dy * (x - x2Original) / dx;
+                if (y < 0 || y >= surface.height) continue;
+
+                uint8_t* pixel = surface.pixels + (y * surface.width + x) * bpp;
+                switch (bpp) {
+                    case 1: {
+                        *pixel = (uint8_t)pixelColor;
+                    } break;
+                    case 2: {
+                        *(uint16_t*)pixel = (uint16_t)pixelColor;
+                    } break;
+                    case 4: {
+                        *(uint32_t*)pixel = pixelColor;
+                    } break;
+                    default: break;
+                }
+            }
+        }
+        else {  // slope greater than 1
+            const int y2Original = y2;
+            if (y1 > y2) SwapInts(&y1, &y2);
+            for (int y = y1; y < y2; ++y) {
+                if (y < 0 || y >= surface.height) continue;
+                const int x = x2 + dx * (y - y2Original) / dy;
+                if (x < 0 || x >= surface.width) continue;
+
+                uint8_t* pixel = surface.pixels + (y * surface.width + x) * bpp;
+                switch (bpp) {
+                    case 1: {
+                        *pixel = (uint8_t)pixelColor;
+                    } break;
+                    case 2: {
+                        *(uint16_t*)pixel = (uint16_t)pixelColor;
+                    } break;
+                    case 4: {
+                        *(uint32_t*)pixel = pixelColor;
+                    } break;
+                    default: break;
+                }
+            }
+        }
+    }
+    else {  // vertical line
+        const int x = x2;
+        if (x < 0 || x >= surface.width) return;
+        if (y1 > y2) SwapInts(&y1, &y2);
+        for (int y = y1; y < y2; ++y) {
+            if (y < 0 || y >= surface.height) continue;
+
+            uint8_t* pixel = surface.pixels + (y * surface.width + x) * bpp;
+            switch (bpp) {
+                case 1: {
+                    *pixel = (uint8_t)pixelColor;
+                } break;
+                case 2: {
+                    *(uint16_t*)pixel = (uint16_t)pixelColor;
+                } break;
+                case 4: {
+                    *(uint32_t*)pixel = pixelColor;
+                } break;
+                default: break;
+            }
+        }
+    }
 }
