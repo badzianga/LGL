@@ -7,13 +7,33 @@ void DrawRect(Surface surface, int x, int y, int w, int h, Color color) {
     FillRect(surface, x, y, w, h, color);
 }
 
+// TODO: support alpha blending
 void DrawCircle(Surface surface, int x, int y, int r, Color color) {
-    (void) surface;
-    (void) x;
-    (void) y;
-    (void) r;
-    (void) color;
-    assert(0 && "TODO: not implemented");
+    const uint8_t bpp = surface.format->bytesPerPixel;
+    const uint32_t pixelColor = ColorToPixel(surface.format, color);
+
+    for (int yi = y - r; yi <= y + r; ++yi) {
+        if (yi < 0 || yi >= surface.height) continue;
+        for (int xi = x - r; xi <= x + r; ++xi) {
+            if (xi < 0 || xi >= surface.width) continue;
+            const int dx = xi - x;
+            const int dy = yi - y;
+            if (dx * dx + dy * dy > r * r) continue;
+            uint8_t* pixel = surface.pixels + (yi * surface.width + xi) * bpp;
+            switch (bpp) {
+                case 1: {
+                    *pixel = (uint8_t)pixelColor;
+                } break;
+                case 2: {
+                    *(uint16_t*)pixel = (uint16_t)pixelColor;
+                } break;
+                case 4: {
+                    *(uint32_t*)pixel = pixelColor;
+                } break;
+                default: break;
+            }
+        }
+    }
 }
 
 // TODO: support alpha blending
