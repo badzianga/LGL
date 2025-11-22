@@ -18,12 +18,34 @@ static void SetPixel(uint8_t* pixel, uint32_t color, uint8_t bpp) {
     }
 }
 
+static uint32_t GetPixelValue(const uint8_t* pixel, uint8_t bpp) {
+    switch (bpp) {
+        case 1: return *(uint8_t*)pixel;
+        case 2: return *(uint16_t*)pixel;
+        case 4: return *(uint32_t*)pixel;
+        default: return 0;
+    }
+}
+
+static Color BlendColors(Color c1, Color c2) {
+    const uint8_t a = c1.a;
+    const uint8_t invA = 255 - a;
+
+    return (Color){
+        .r = (c1.r * a + c2.r * invA) / 255,
+        .g = (c1.g * a + c2.g * invA) / 255,
+        .b = (c1.b * a + c2.b * invA) / 255,
+        .a = 255
+    };
+}
+
 void DrawRect(Surface surface, int x, int y, int w, int h, Color color) {
     FillRect(surface, x, y, w, h, color);
 }
 
-// TODO: support alpha blending
 void DrawCircle(Surface surface, int x, int y, int r, Color color) {
+    if (color.a == 0) return;
+
     const uint8_t bpp = surface.format->bytesPerPixel;
     const uint32_t pixelColor = ColorToPixel(surface.format, color);
 
@@ -35,22 +57,39 @@ void DrawCircle(Surface surface, int x, int y, int r, Color color) {
             const int dy = yi - y;
             if (dx * dx + dy * dy > r * r) continue;
             uint8_t* pixel = surface.pixels + (yi * surface.width + xi) * bpp;
-            SetPixel(pixel, pixelColor, bpp);
+
+            if (color.a == 255) {
+                SetPixel(pixel, pixelColor, bpp);
+            }
+            else {
+                const Color surfColor = PixelToColor(surface.format, GetPixelValue(pixel, bpp));
+                const uint32_t blendedPixel = ColorToPixel(surface.format, BlendColors(color, surfColor));
+                SetPixel(pixel, blendedPixel, bpp);
+            }
         }
     }
 }
 
-static void FillFlatLine(Surface surface, int x1, int x2, int y, uint32_t color) {
+static void FillFlatLine(Surface surface, int x1, int x2, int y, Color color) {
+    const uint32_t pixelColor = ColorToPixel(surface.format, color);
     const uint8_t bpp = surface.format->bytesPerPixel;
 
     for (int x = x1; x < x2; ++x) {
         if (x < 0 || x >= surface.width) continue;
         uint8_t* pixel = surface.pixels + (y * surface.width + x) * bpp;
-        SetPixel(pixel, color, bpp);
+
+        if (color.a == 255) {
+            SetPixel(pixel, pixelColor, bpp);
+        }
+        else {
+            const Color surfColor = PixelToColor(surface.format, GetPixelValue(pixel, bpp));
+            const uint32_t blendedPixel = ColorToPixel(surface.format, BlendColors(color, surfColor));
+            SetPixel(pixel, blendedPixel, bpp);
+        }
     }
 }
 
-static void FillBottomFlatTriangle(Surface surface, int x1, int y1, int x2, int y2, int x3, int y3, uint32_t color) {
+static void FillBottomFlatTriangle(Surface surface, int x1, int y1, int x2, int y2, int x3, int y3, Color color) {
     const float invSlope1 = (float)(x2 - x1) / (float)(y2 - y1);
     const float invSlope2 = (float)(x3 - x1) / (float)(y3 - y1);
 
@@ -65,7 +104,7 @@ static void FillBottomFlatTriangle(Surface surface, int x1, int y1, int x2, int 
     }
 }
 
-static void FillTopFlatTriangle(Surface surface, int x1, int y1, int x2, int y2, int x3, int y3, uint32_t color) {
+static void FillTopFlatTriangle(Surface surface, int x1, int y1, int x2, int y2, int x3, int y3, Color color) {
     const float invSlope1 = (float)(x3 - x1) / (float)(y3 - y1);
     const float invSlope2 = (float)(x3 - x2) / (float)(y3 - y2);
 
@@ -106,30 +145,26 @@ static void SwapInts(int* a, int* b) {
     *b = temp;
 }
 
-// TODO: support alpha blending
 void DrawTriangle(Surface surface, int x1, int y1, int x2, int y2, int x3, int y3, Color color) {
     SortTrianglePointsAscendingByY(&x1, &y1, &x2, &y2, &x3, &y3);
 
-    const uint32_t pixelColor = ColorToPixel(surface.format, color);
-
     if (y2 == y3) {
         if (x2 > x3) SwapInts(&x2, &x3);
-        FillBottomFlatTriangle(surface, x1, y1, x2, y2, x3, y3, pixelColor);
+        FillBottomFlatTriangle(surface, x1, y1, x2, y2, x3, y3, color);
     }
     else if (y1 == y2) {
         if (x1 > x2) SwapInts(&x1, &x2);
-        FillTopFlatTriangle(surface, x1, y1, x2, y2, x3, y3, pixelColor);
+        FillTopFlatTriangle(surface, x1, y1, x2, y2, x3, y3, color);
     }
     else {
         int x4 = x1 + (int)(((float)(y2 - y1) / (float)(y3 - y1)) * (float)(x3 - x1));
         const int y4 = y2;
         if (x2 > x4) SwapInts(&x2, &x4);
-        FillBottomFlatTriangle(surface, x1, y1, x2, y2, x4, y4, pixelColor);
-        FillTopFlatTriangle(surface, x2, y2, x4, y4, x3, y3, pixelColor);
+        FillBottomFlatTriangle(surface, x1, y1, x2, y2, x4, y4, color);
+        FillTopFlatTriangle(surface, x2, y2, x4, y4, x3, y3, color);
     }
 }
 
-// TODO: support alpha blending
 void DrawLine(Surface surface, int x1, int y1, int x2, int y2, Color color) {
     const uint8_t bpp = surface.format->bytesPerPixel;
     const uint32_t pixelColor = ColorToPixel(surface.format, color);
@@ -147,7 +182,15 @@ void DrawLine(Surface surface, int x1, int y1, int x2, int y2, Color color) {
                 if (y < 0 || y >= surface.height) continue;
 
                 uint8_t* pixel = surface.pixels + (y * surface.width + x) * bpp;
-                SetPixel(pixel, pixelColor, bpp);
+
+                if (color.a == 255) {
+                    SetPixel(pixel, pixelColor, bpp);
+                }
+                else {
+                    const Color surfColor = PixelToColor(surface.format, GetPixelValue(pixel, bpp));
+                    const uint32_t blendedPixel = ColorToPixel(surface.format, BlendColors(color, surfColor));
+                    SetPixel(pixel, blendedPixel, bpp);
+                }
             }
         }
         else {  // slope greater than 1
@@ -159,7 +202,15 @@ void DrawLine(Surface surface, int x1, int y1, int x2, int y2, Color color) {
                 if (x < 0 || x >= surface.width) continue;
 
                 uint8_t* pixel = surface.pixels + (y * surface.width + x) * bpp;
-                SetPixel(pixel, pixelColor, bpp);
+
+                if (color.a == 255) {
+                    SetPixel(pixel, pixelColor, bpp);
+                }
+                else {
+                    const Color surfColor = PixelToColor(surface.format, GetPixelValue(pixel, bpp));
+                    const uint32_t blendedPixel = ColorToPixel(surface.format, BlendColors(color, surfColor));
+                    SetPixel(pixel, blendedPixel, bpp);
+                }
             }
         }
     }
