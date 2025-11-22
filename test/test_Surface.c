@@ -62,9 +62,9 @@ void test_SurfaceCopyShouldReturnExactCopyOfTheOriginal() {
     SurfaceDestroy(&copy);
 }
 
-void test_SurfaceMakeConvertedShouldReturnInvalidSurfaceWhenFormatIsNotSpecified() {
+void test_SurfaceConvertShouldReturnInvalidSurfaceWhenFormatIsNotSpecified() {
     Surface original = SurfaceCreate(4, 3, &FORMAT_RGB332);
-    Surface surface = SurfaceMakeConverted(original, NULL);
+    Surface surface = SurfaceConvert(original, NULL);
 
     ASSERT_SURFACE_IS_INVALID(surface);
 
@@ -73,7 +73,7 @@ void test_SurfaceMakeConvertedShouldReturnInvalidSurfaceWhenFormatIsNotSpecified
 
 void test_ConvertedSurfaceShouldBeCopyOfTheOriginalIfFormatsAreTheSame() {
     Surface original = SurfaceCreate(3, 2, &FORMAT_RGBA8888);
-    Surface converted = SurfaceMakeConverted(original, original.format);
+    Surface converted = SurfaceConvert(original, original.format);
 
     TEST_ASSERT_EQUAL_HEX32_ARRAY(original.pixels, converted.pixels, original.height * original.width);
     TEST_ASSERT_EQUAL(original.width, converted.width);
@@ -92,7 +92,7 @@ void test_ConvertedSurfaceWithTheSameAmountOfBppShouldHasTheSameColors() {
         ((uint32_t*)original.pixels)[i] = ColorToPixel(original.format, colors[i]);
     }
 
-    Surface converted = SurfaceMakeConverted(original, &FORMAT_RGBA8888);
+    Surface converted = SurfaceConvert(original, &FORMAT_RGBA8888);
     for (int i = 0; i < 6; ++i) {
         Color color = PixelToColor(&FORMAT_RGBA8888, ((uint32_t*)converted.pixels)[i]);
         TEST_ASSERT_EQUAL_HEX8(colors[i].r, color.r);
@@ -112,7 +112,7 @@ void test_ConversionFromHigherToLowerBppShouldWorkCorrectly() {
         ((uint32_t*)original.pixels)[i] = ColorToPixel(original.format, colors[i]);
     }
 
-    Surface converted = SurfaceMakeConverted(original, &FORMAT_RGB565);
+    Surface converted = SurfaceConvert(original, &FORMAT_RGB565);
     const uint16_t expected[6] = {
         ColorToPixel(&FORMAT_RGB565, colors[0]),
         ColorToPixel(&FORMAT_RGB565, colors[1]),
@@ -134,7 +134,7 @@ void test_ConversionFromHLowerToHigherBppShouldReturnSurfaceWithComponentLosses(
         ((uint8_t*)original.pixels)[i] = ColorToPixel(original.format, colors[i]);
     }
 
-    Surface converted = SurfaceMakeConverted(original, &FORMAT_ARGB8888);
+    Surface converted = SurfaceConvert(original, &FORMAT_ARGB8888);
     const uint32_t expected[6] = {
         ColorToPixel(&FORMAT_ARGB8888, PixelToColor(&FORMAT_RGB332, ColorToPixel(&FORMAT_RGB332, colors[0]))),
         ColorToPixel(&FORMAT_ARGB8888, PixelToColor(&FORMAT_RGB332, ColorToPixel(&FORMAT_RGB332, colors[1]))),

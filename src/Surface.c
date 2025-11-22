@@ -30,7 +30,7 @@ Surface SurfaceCopy(Surface src) {
     return copy;
 }
 
-Surface SurfaceMakeConverted(Surface surface, const PixelFormat* format) {
+Surface SurfaceConvert(Surface surface, const PixelFormat* format) {
     if (surface.format == NULL || format == NULL) {
         return (Surface){ 0 };
     }
