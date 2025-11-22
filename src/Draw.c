@@ -3,6 +3,21 @@
 #include "Draw.h"
 #include "FillRect.h"
 
+static void SetPixel(uint8_t* pixel, uint32_t color, uint8_t bpp) {
+    switch (bpp) {
+        case 1: {
+            *(uint8_t*)pixel = (uint8_t)color;
+        } break;
+        case 2: {
+            *(uint16_t*)pixel = (uint16_t)color;
+        } break;
+        case 4: {
+            *(uint32_t*)pixel = (uint32_t)color;
+        } break;
+        default: break;
+    }
+}
+
 void DrawRect(Surface surface, int x, int y, int w, int h, Color color) {
     FillRect(surface, x, y, w, h, color);
 }
@@ -20,18 +35,7 @@ void DrawCircle(Surface surface, int x, int y, int r, Color color) {
             const int dy = yi - y;
             if (dx * dx + dy * dy > r * r) continue;
             uint8_t* pixel = surface.pixels + (yi * surface.width + xi) * bpp;
-            switch (bpp) {
-                case 1: {
-                    *pixel = (uint8_t)pixelColor;
-                } break;
-                case 2: {
-                    *(uint16_t*)pixel = (uint16_t)pixelColor;
-                } break;
-                case 4: {
-                    *(uint32_t*)pixel = pixelColor;
-                } break;
-                default: break;
-            }
+            SetPixel(pixel, pixelColor, bpp);
         }
     }
 }
@@ -42,18 +46,7 @@ static void FillFlatLine(Surface surface, int x1, int x2, int y, uint32_t color)
     for (int x = x1; x < x2; ++x) {
         if (x < 0 || x >= surface.width) continue;
         uint8_t* pixel = surface.pixels + (y * surface.width + x) * bpp;
-        switch (bpp) {
-            case 1: {
-                *pixel = (uint8_t)color;
-            } break;
-            case 2: {
-                *(uint16_t*)pixel = (uint16_t)color;
-            } break;
-            case 4: {
-                *(uint32_t*)pixel = color;
-            } break;
-            default: break;
-        }
+        SetPixel(pixel, color, bpp);
     }
 }
 
@@ -154,18 +147,7 @@ void DrawLine(Surface surface, int x1, int y1, int x2, int y2, Color color) {
                 if (y < 0 || y >= surface.height) continue;
 
                 uint8_t* pixel = surface.pixels + (y * surface.width + x) * bpp;
-                switch (bpp) {
-                    case 1: {
-                        *pixel = (uint8_t)pixelColor;
-                    } break;
-                    case 2: {
-                        *(uint16_t*)pixel = (uint16_t)pixelColor;
-                    } break;
-                    case 4: {
-                        *(uint32_t*)pixel = pixelColor;
-                    } break;
-                    default: break;
-                }
+                SetPixel(pixel, pixelColor, bpp);
             }
         }
         else {  // slope greater than 1
@@ -177,18 +159,7 @@ void DrawLine(Surface surface, int x1, int y1, int x2, int y2, Color color) {
                 if (x < 0 || x >= surface.width) continue;
 
                 uint8_t* pixel = surface.pixels + (y * surface.width + x) * bpp;
-                switch (bpp) {
-                    case 1: {
-                        *pixel = (uint8_t)pixelColor;
-                    } break;
-                    case 2: {
-                        *(uint16_t*)pixel = (uint16_t)pixelColor;
-                    } break;
-                    case 4: {
-                        *(uint32_t*)pixel = pixelColor;
-                    } break;
-                    default: break;
-                }
+                SetPixel(pixel, pixelColor, bpp);
             }
         }
     }
@@ -200,18 +171,7 @@ void DrawLine(Surface surface, int x1, int y1, int x2, int y2, Color color) {
             if (y < 0 || y >= surface.height) continue;
 
             uint8_t* pixel = surface.pixels + (y * surface.width + x) * bpp;
-            switch (bpp) {
-                case 1: {
-                    *pixel = (uint8_t)pixelColor;
-                } break;
-                case 2: {
-                    *(uint16_t*)pixel = (uint16_t)pixelColor;
-                } break;
-                case 4: {
-                    *(uint32_t*)pixel = pixelColor;
-                } break;
-                default: break;
-            }
+            SetPixel(pixel, pixelColor, bpp);
         }
     }
 }
