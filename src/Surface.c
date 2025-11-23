@@ -19,6 +19,13 @@ Surface SurfaceCreate(int width, int height, const PixelFormat* format) {
     return (Surface){ pixels, width, height, format };
 }
 
+Surface SurfaceCreateFromBuffer(int width, int height, const PixelFormat* format, void* buffer) {
+    if (width <= 0 || height <= 0 || format == NULL || buffer == NULL) {
+        return (Surface){ 0 };
+    }
+    return (Surface){ buffer, width, height, format };
+}
+
 void SurfaceDestroy(Surface* surface) {
     free(surface->pixels);
     *surface = (Surface){ 0 };

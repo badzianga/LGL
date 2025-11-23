@@ -15,6 +15,7 @@ typedef struct {
 } Surface;
 
 Surface SurfaceCreate(int width, int height, const PixelFormat* format);
+Surface SurfaceCreateFromBuffer(int width, int height, const PixelFormat* format, void* buffer);
 void SurfaceDestroy(Surface* surface);
 Surface SurfaceCopy(Surface src);
 Surface SurfaceConvert(Surface surface, const PixelFormat* format);
