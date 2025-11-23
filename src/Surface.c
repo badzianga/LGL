@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "Allocator.h"
 #include "Color.h"
 #include "FillRect.h"
 #include "PixelFormat.h"
@@ -11,10 +12,11 @@ Surface SurfaceCreate(int width, int height, const PixelFormat* format) {
         return (Surface){ 0 };
     }
 
-    void* pixels = calloc(width * height, format->bytesPerPixel);
+    void* pixels = AllocatorAlloc(width * height * format->bytesPerPixel);
     if (pixels == NULL) {
         return (Surface){ 0 };
     }
+    memset(pixels, 0, width * height * format->bytesPerPixel);
 
     return (Surface){ pixels, width, height, format };
 }
@@ -27,7 +29,7 @@ Surface SurfaceCreateFromBuffer(int width, int height, const PixelFormat* format
 }
 
 void SurfaceDestroy(Surface* surface) {
-    free(surface->pixels);
+    AllocatorFree(surface->pixels);
     *surface = (Surface){ 0 };
 }
 

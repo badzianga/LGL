@@ -1,6 +1,6 @@
 #include <math.h>
-#include <stdlib.h>
 
+#include "Allocator.h"
 #include "Transform.h"
 
 void TransformFlipX(Surface surface) {
@@ -158,8 +158,8 @@ Surface TransformScale2x(Surface original) {
 
     const Surface scaled = SurfaceCreate(original.width * 2, original.height * 2, fmt);
 
-    Color* oColorArray = malloc(sizeof(Color) * original.width * original.height);
-    Color* sColorArray = malloc(sizeof(Color) * scaled.width * scaled.height);
+    Color* oColorArray = AllocatorAlloc(sizeof(Color) * original.width * original.height);
+    Color* sColorArray = AllocatorAlloc(sizeof(Color) * scaled.width * scaled.height);
 
     for (int i = 0; i < original.width * original.height; i++) {
         const uint8_t* pixel = original.pixels + i * bpp;
@@ -230,8 +230,8 @@ Surface TransformScale2x(Surface original) {
         }
     }
 
-    free(oColorArray);
-    free(sColorArray);
+    AllocatorFree(oColorArray);
+    AllocatorFree(sColorArray);
 
     return scaled;
 }
