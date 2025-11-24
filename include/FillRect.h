@@ -1,13 +1,14 @@
 #ifndef LGL_FILL_RECT_H
 #define LGL_FILL_RECT_H
 
+#include "Rect.h"
 #include "Surface.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif  // __cplusplus
 
-void FillRect(Surface surface, int x, int y, int w, int h, Color color);
+void FillRect(Surface surface, const Rect* rect, uint32_t color);
 
 #ifdef __cplusplus
 }

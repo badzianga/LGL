@@ -14,7 +14,7 @@ typedef struct Rect {
     int height;
 } Rect;
 
-bool RectIntersection(Rect a, Rect b, Rect* result);
+bool RectIntersection(const Rect* a, const Rect* b, Rect* result);
 
 #ifdef __cplusplus
 }

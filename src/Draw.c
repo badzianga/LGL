@@ -40,7 +40,8 @@ static Color BlendColors(Color c1, Color c2) {
 }
 
 void DrawRect(Surface surface, int x, int y, int w, int h, Color color) {
-    FillRect(surface, x, y, w, h, color);
+    // TODO: this rect is not clipped yet
+    FillRect(surface, &(Rect){ x, y, w, h }, ColorToPixel(surface.format, color));
 }
 
 void DrawCircle(Surface surface, int x, int y, int r, Color color) {

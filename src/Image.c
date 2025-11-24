@@ -18,6 +18,7 @@ Surface ImageLoad(const char* path) {
         return (Surface){ 0 };
     }
 
-    // TODO: on big-endian system it should probabyl be RGBA8888
-    return (Surface){ data, width, height, &FORMAT_ABGR8888 };
+    // TODO: on big-endian system it should probably be RGBA8888
+    const PixelFormat* format = &FORMAT_ABGR8888;
+    return (Surface){ width, height, data, width * format->bytesPerPixel, 0, format };
 }

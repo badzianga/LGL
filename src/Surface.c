@@ -12,20 +12,24 @@ Surface SurfaceCreate(int width, int height, const PixelFormat* format) {
         return (Surface){ 0 };
     }
 
-    void* pixels = AllocatorAlloc(width * height * format->bytesPerPixel);
+    const int stride = width * format->bytesPerPixel;
+    void* pixels = AllocatorAlloc(stride * height);
     if (pixels == NULL) {
         return (Surface){ 0 };
     }
-    memset(pixels, 0, width * height * format->bytesPerPixel);
+    memset(pixels, 0, stride * height);
 
-    return (Surface){ pixels, width, height, format };
+    return (Surface){ width, height, pixels, stride, 0, format };
 }
 
 Surface SurfaceCreateFromBuffer(int width, int height, const PixelFormat* format, void* buffer) {
     if (width <= 0 || height <= 0 || format == NULL || buffer == NULL) {
         return (Surface){ 0 };
     }
-    return (Surface){ buffer, width, height, format };
+
+    const int stride = width * format->bytesPerPixel;
+
+    return (Surface){ width, height, buffer, stride, 0, format };
 }
 
 void SurfaceDestroy(Surface* surface) {
@@ -35,7 +39,7 @@ void SurfaceDestroy(Surface* surface) {
 
 Surface SurfaceCopy(Surface src) {
     Surface copy = SurfaceCreate(src.width, src.height, src.format);
-    memcpy(copy.pixels, src.pixels, src.format->bytesPerPixel * src.width * src.height);
+    memcpy(copy.pixels, src.pixels, src.stride * src.height);
     return copy;
 }
 
@@ -50,12 +54,14 @@ Surface SurfaceConvert(Surface surface, const PixelFormat* format) {
 
     Surface new = SurfaceCreate(surface.width, surface.height, format);
 
+    // TODO: use SurfaceBlit here
+
     const uint8_t srcBpp = surface.format->bytesPerPixel;
     const uint8_t dstBpp = new.format->bytesPerPixel;
 
     for (int y = 0; y < surface.height; ++y) {
         for (int x = 0; x < surface.width; ++x) {
-            const void* fromPtr = (uint8_t*)surface.pixels + (y * surface.width + x) * srcBpp;
+            const void* fromPtr = (uint8_t*)surface.pixels + y * surface.stride + x * srcBpp;
             uint32_t fromPixel = 0;
             switch (srcBpp) {
                 case 1: {
@@ -72,8 +78,8 @@ Surface SurfaceConvert(Surface surface, const PixelFormat* format) {
 
             Color color = PixelToColor(surface.format, fromPixel);
 
-            const void* toPtr = (uint8_t*)new.pixels + (y * new.width + x) * dstBpp;
-            uint32_t toPixel = ColorToPixel(new.format, color);
+            const void* toPtr = (uint8_t*)new.pixels + y * new.stride + x * dstBpp;
+            const uint32_t toPixel = ColorToPixel(new.format, color);
             switch (dstBpp) {
                 case 1: {
                     *(uint8_t*)toPtr = (uint8_t)toPixel;
@@ -92,8 +98,11 @@ Surface SurfaceConvert(Surface surface, const PixelFormat* format) {
 }
 
 void SurfaceFill(Surface surface, Color color) {
-    FillRect(surface, 0, 0, surface.width, surface.height, color);
+    const Rect rect = { 0, 0, surface.width, surface.height };
+    // TODO: check if blending is necessary, then call BlendFillRect()
+    FillRect(surface, &rect, ColorToPixel(surface.format, color));
 }
+
 
 static void BlitSameFormat(Surface dest, Surface src, int x, int y) {
     const int bpp = src.format->bytesPerPixel;
@@ -104,8 +113,8 @@ static void BlitSameFormat(Surface dest, Surface src, int x, int y) {
         for (int sx = 0; sx < src.width; ++sx) {
             const int dx = x + sx;
             if (dx < 0 || dx >= dest.width) continue;
-            const uint8_t* srcPixel = (uint8_t*)src.pixels + (sy * src.width + sx) * bpp;
-            uint8_t* destPixel = (uint8_t*)dest.pixels + (dy * dest.width + dx) * bpp;
+            const uint8_t* srcPixel = (uint8_t*)src.pixels + sy * src.stride + sx * bpp;
+            uint8_t* destPixel = (uint8_t*)dest.pixels + dy * dest.stride + dx * bpp;
 
             for (int b = 0; b < bpp; ++b) {
                 destPixel[b] = srcPixel[b];
@@ -161,7 +170,7 @@ static void BlitSameFormatA(Surface dest, Surface src, int x, int y) {
                 outColor = ColorToPixel(src.format, srcColor);
             }
 
-            uint8_t* destPixel = (uint8_t*)dest.pixels + (dy * dest.width + dx) * bpp;
+            uint8_t* destPixel = (uint8_t*)dest.pixels + dy * dest.stride + dx * bpp;
 
             for (int b = 0; b < bpp; ++b) {
                 destPixel[b] = ((uint8_t*)&outColor)[b];
@@ -181,7 +190,7 @@ static void BlitDifferentFormat(Surface dest, Surface src, int x, int y) {
             const int dx = x + sx;
             if (dx < 0 || dx >= dest.width) continue;
 
-            const uint8_t* srcPixel = (uint8_t*)src.pixels + (sy * src.width + sx) * srcBpp;
+            const uint8_t* srcPixel = (uint8_t*)src.pixels + sy * src.stride + sx * srcBpp;
             uint32_t srcPixelValue = 0;
             switch (srcBpp) {
                 case 1: {
@@ -197,7 +206,7 @@ static void BlitDifferentFormat(Surface dest, Surface src, int x, int y) {
             }
             const uint32_t newValue = ColorToPixel(dest.format, PixelToColor(src.format, srcPixelValue));
 
-            uint8_t* destPixel = (uint8_t*)dest.pixels + (dy * dest.width + dx) * destBpp;
+            uint8_t* destPixel = (uint8_t*)dest.pixels + dy * dest.stride + dx * destBpp;
 
             for (int b = 0; b < destBpp; ++b) {
                 destPixel[b] = ((uint8_t*)&newValue)[b];
@@ -217,7 +226,7 @@ static void BlitDifferentFormatA(Surface dest, Surface src, int x, int y) {
             const int dx = x + sx;
             if (dx < 0 || dx >= dest.width) continue;
 
-            const uint8_t* srcPixel = (uint8_t*)src.pixels + (sy * src.width + sx) * srcBpp;
+            const uint8_t* srcPixel = (uint8_t*)src.pixels + sy * src.stride + sx * srcBpp;
             uint32_t srcPixelValue = 0;
             switch (srcBpp) {
                 case 1: {
@@ -234,7 +243,7 @@ static void BlitDifferentFormatA(Surface dest, Surface src, int x, int y) {
             const Color srcColor = PixelToColor(src.format, srcPixelValue);
             if (srcColor.a == 0) continue;
 
-            uint8_t* destPixel = (uint8_t*)dest.pixels + (dy * dest.width + dx) * destBpp;
+            uint8_t* destPixel = (uint8_t*)dest.pixels + dy * dest.stride + dx * destBpp;
             Color destColor = { 0 };
             switch (destBpp) {
                 case 1: {
@@ -267,7 +276,7 @@ static void BlitDifferentFormatA(Surface dest, Surface src, int x, int y) {
                 outColor = ColorToPixel(dest.format, srcColor);
             }
 
-            uint8_t* dstPixel = (uint8_t*)dest.pixels + (dy * dest.width + dx) * destBpp;
+            uint8_t* dstPixel = (uint8_t*)dest.pixels + dy * dest.stride + dx * destBpp;
 
             for (int b = 0; b < destBpp; ++b) {
                 dstPixel[b] = ((uint8_t*)&outColor)[b];

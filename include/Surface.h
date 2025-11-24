@@ -7,10 +7,12 @@
 extern "C" {
 #endif  // __cplusplus
 
-typedef struct {
-    void* pixels;
+typedef struct Surface {
     int width;
     int height;
+    void* pixels;
+    int stride;
+    uint32_t padding;  // TODO: currently unused, in the future it will store flags
     const PixelFormat* format;
 } Surface;
 
