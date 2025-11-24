@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <stddef.h>
 
 #include "FillRect.h"
@@ -9,6 +8,34 @@ static inline void Memset4(void* ptr, uint32_t value, size_t n) {
     uint32_t* p = ptr;
     while (n--) {
         *p++ = value;
+    }
+}
+
+static void FillRect1(uint8_t* target, int stride, int w, int h, uint32_t color) {
+    const int quads = w >> 2;
+    const int remaining = w & 3;
+
+    while (h--) {
+        Memset4(target, color, quads);
+        uint8_t* pixel = target + (quads << 2);
+        int n = remaining;
+        while (n--) {
+            *pixel++ = color;
+        }
+        target += stride;
+    }
+}
+
+static void FillRect2(uint8_t* target, int stride, int w, int h, uint32_t color) {
+    const int pairs = w >> 1;
+    const int odd = w & 1;
+
+    while (h--) {
+        Memset4(target, color, pairs);
+        if (odd) {
+            *(uint16_t*)(target + (pairs << 2)) = (uint16_t)color;
+        }
+        target += stride;
     }
 }
 
@@ -32,11 +59,11 @@ void FillRect(Surface surface, const Rect* rect, uint32_t color) {
         case 1: {
             color |= color << 8;
             color |= color << 16;
-            assert(0 && "TODO: not implemented");
+            FillRect1(start, surface.stride, clipped.width, clipped.height, color);
         } break;
         case 2: {
             color |= color << 16;
-            assert(0 && "TODO: not implemented");
+            FillRect2(start, surface.stride, clipped.width, clipped.height, color);
         } break;
         case 4: {
             FillRect4(start, surface.stride, clipped.width, clipped.height, color);
