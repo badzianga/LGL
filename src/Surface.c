@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "Allocator.h"
+#include "BlendFillRect.h"
 #include "Color.h"
 #include "FillRect.h"
 #include "PixelFormat.h"
@@ -99,10 +100,14 @@ Surface SurfaceConvert(Surface surface, const PixelFormat* format) {
 
 void SurfaceFill(Surface surface, Color color) {
     const Rect rect = { 0, 0, surface.width, surface.height };
-    // TODO: check if blending is necessary, then call BlendFillRect()
-    FillRect(surface, &rect, ColorToPixel(surface.format, color));
+    if (color.a == 0) return;
+    if (color.a == 255) {
+        FillRect(surface, &rect, ColorToPixel(surface.format, color));
+    }
+    else {
+        BlendFillRect(surface, &rect, color);
+    }
 }
-
 
 static void BlitSameFormat(Surface dest, Surface src, int x, int y) {
     const int bpp = src.format->bytesPerPixel;

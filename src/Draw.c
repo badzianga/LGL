@@ -1,5 +1,6 @@
 #include <stdlib.h>
 
+#include "BlendFillRect.h"
 #include "Draw.h"
 #include "FillRect.h"
 
@@ -40,8 +41,14 @@ static Color BlendColors(Color c1, Color c2) {
 }
 
 void DrawRect(Surface surface, int x, int y, int w, int h, Color color) {
-    // TODO: this rect is not clipped yet
-    FillRect(surface, &(Rect){ x, y, w, h }, ColorToPixel(surface.format, color));
+    const Rect rect = { x, y, w, h };
+    if (color.a == 0) return;
+    if (color.a == 255) {
+        FillRect(surface, &rect, ColorToPixel(surface.format, color));
+    }
+    else {
+        BlendFillRect(surface, &rect, color);
+    }
 }
 
 void DrawCircle(Surface surface, int x, int y, int r, Color color) {
