@@ -1,15 +1,6 @@
-#include <stddef.h>
-
 #include "FillRect.h"
+#include "internal/Inlines.h"
 #include "Rect.h"
-
-// TODO: optimize with loop unrolling
-static inline void Memset4(void* ptr, uint32_t value, size_t n) {
-    uint32_t* p = ptr;
-    while (n--) {
-        *p++ = value;
-    }
-}
 
 static void FillRect1(uint8_t* target, int stride, int w, int h, uint32_t color) {
     const int quads = w >> 2;
@@ -55,20 +46,20 @@ void FillRect(Surface surface, const Rect* rect, uint32_t color) {
 
     if (!RectIntersection(&surfaceRect, rect, &clipped)) return;
 
-    uint8_t* start = (uint8_t*)surface.pixels + clipped.y * surface.stride + clipped.x * bpp;
+    uint8_t* row = (uint8_t*)surface.pixels + clipped.y * surface.stride + clipped.x * bpp;
 
     switch (bpp) {
         case 1: {
             color |= color << 8;
             color |= color << 16;
-            FillRect1(start, surface.stride, clipped.width, clipped.height, color);
+            FillRect1(row, surface.stride, clipped.width, clipped.height, color);
         } break;
         case 2: {
             color |= color << 16;
-            FillRect2(start, surface.stride, clipped.width, clipped.height, color);
+            FillRect2(row, surface.stride, clipped.width, clipped.height, color);
         } break;
         case 4: {
-            FillRect4(start, surface.stride, clipped.width, clipped.height, color);
+            FillRect4(row, surface.stride, clipped.width, clipped.height, color);
         } break;
         default: break;
     }

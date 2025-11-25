@@ -1,34 +1,74 @@
 #include "BlendFillRect.h"
 #include "FillRect.h"
+#include "internal/Inlines.h"
 
-// alpha blending works ONLY for 4-byte colors with alpha channel
+static void BlendFillRect1(uint8_t* target, int stride, int w, int h, Color color, const PixelFormat* format) {
+    const uint8_t a = color.a;
+    const uint8_t invA = 255 - a;
+
+    while (h--) {
+        uint8_t* pixel = target;
+        int n = w;
+        while (n--) {
+            Color c = PixelToColor(format, *pixel);
+            c = BlendColors(color, c, a, invA);
+            *pixel++ = (uint8_t)ColorToPixel(format, c);
+        }
+        target += stride;
+    }
+}
+
+static void BlendFillRect2(uint8_t* target, int stride, int w, int h, Color color, const PixelFormat* format) {
+    const uint8_t a = color.a;
+    const uint8_t invA = 255 - a;
+
+    while (h--) {
+        uint16_t* pixel = (uint16_t*)target;
+        int n = w;
+        while (n--) {
+            Color c = PixelToColor(format, *pixel);
+            c = BlendColors(color, c, a, invA);
+            *pixel++ = (uint16_t)ColorToPixel(format, c);
+        }
+        target += stride;
+    }
+}
+
+static void BlendFillRect4(uint8_t* target, int stride, int w, int h, Color color, const PixelFormat* format) {
+    const uint8_t a = color.a;
+    const uint8_t invA = 255 - a;
+
+    while (h--) {
+        uint32_t* pixel = (uint32_t*)target;
+        int n = w;
+        while (n--) {
+            Color c = PixelToColor(format, *pixel);
+            c = BlendColors(color, c, a, invA);
+            *pixel++ = ColorToPixel(format, c);
+        }
+        target += stride;
+    }
+}
+
 void BlendFillRect(Surface surface, const Rect* rect, Color color) {
-    // fallback to FillRect
-    if (!surface.format->aMask) return FillRect(surface, rect, ColorToPixel(surface.format, color));
-
+    const uint8_t bpp = surface.format->bytesPerPixel;
     const Rect surfaceRect = { 0, 0, surface.width, surface.height };
     Rect clipped;
 
     if (!RectIntersection(&surfaceRect, rect, &clipped)) return;
 
-    uint8_t* row = (uint8_t*)surface.pixels + clipped.y * surface.stride + clipped.x * surface.format->bytesPerPixel;
+    uint8_t* row = (uint8_t*)surface.pixels + clipped.y * surface.stride + clipped.x * bpp;
 
-    const uint32_t a = color.a;
-    const uint32_t invA = 255 - a;
-
-    int h = rect->height;
-    while (h--) {
-        int w = rect->width;
-        uint32_t* ptr = (uint32_t*)row;
-        while (w--) {
-            Color c = PixelToColor(surface.format, *ptr);
-            c.r = (color.r * a + c.r * invA) / 255;
-            c.g = (color.g * a + c.g * invA) / 255;
-            c.b = (color.b * a + c.b * invA) / 255;
-            c.a = 255;
-
-            *ptr++ = ColorToPixel(surface.format, c);
-        }
-        row += surface.stride;
+    switch (bpp) {
+        case 1: {
+            BlendFillRect1(row, surface.stride, clipped.width, clipped.height, color, surface.format);
+        } break;
+        case 2: {
+            BlendFillRect2(row, surface.stride, clipped.width, clipped.height, color, surface.format);
+        } break;
+        case 4: {
+            BlendFillRect4(row, surface.stride, clipped.width, clipped.height, color, surface.format);
+        } break;
+        default: break;
     }
 }
