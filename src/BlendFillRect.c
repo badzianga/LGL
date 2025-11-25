@@ -2,53 +2,25 @@
 #include "FillRect.h"
 #include "internal/Inlines.h"
 
-static void BlendFillRect1(uint8_t* target, int stride, int w, int h, Color color, const PixelFormat* format) {
-    const uint8_t a = color.a;
-    const uint8_t invA = 255 - a;
-
-    while (h--) {
-        uint8_t* pixel = target;
-        int n = w;
-        while (n--) {
-            Color c = PixelToColor(format, *pixel);
-            c = BlendColors(color, c, a, invA);
-            *pixel++ = (uint8_t)ColorToPixel(format, c);
-        }
-        target += stride;
-    }
+#define MAKE_BLEND_FILL_FUNCTION(TYPE, BYTES)                                                                         \
+static void BlendFillRect##BYTES(uint8_t* target, int stride, int w, int h, Color color, const PixelFormat* format) { \
+    const uint8_t a = color.a;                                                                                        \
+    const uint8_t invA = 255 - a;                                                                                     \
+    while (h--) {                                                                                                     \
+        TYPE* pixel = (TYPE*)target;                                                                                  \
+        int n = w;                                                                                                    \
+        while (n--) {                                                                                                 \
+            Color c = PixelToColor(format, *pixel);                                                                   \
+            c = BlendColors(color, c, a, invA);                                                                       \
+            *pixel++ = (TYPE)ColorToPixel(format, c);                                                                 \
+        }                                                                                                             \
+        target += stride;                                                                                             \
+    }                                                                                                                 \
 }
 
-static void BlendFillRect2(uint8_t* target, int stride, int w, int h, Color color, const PixelFormat* format) {
-    const uint8_t a = color.a;
-    const uint8_t invA = 255 - a;
-
-    while (h--) {
-        uint16_t* pixel = (uint16_t*)target;
-        int n = w;
-        while (n--) {
-            Color c = PixelToColor(format, *pixel);
-            c = BlendColors(color, c, a, invA);
-            *pixel++ = (uint16_t)ColorToPixel(format, c);
-        }
-        target += stride;
-    }
-}
-
-static void BlendFillRect4(uint8_t* target, int stride, int w, int h, Color color, const PixelFormat* format) {
-    const uint8_t a = color.a;
-    const uint8_t invA = 255 - a;
-
-    while (h--) {
-        uint32_t* pixel = (uint32_t*)target;
-        int n = w;
-        while (n--) {
-            Color c = PixelToColor(format, *pixel);
-            c = BlendColors(color, c, a, invA);
-            *pixel++ = ColorToPixel(format, c);
-        }
-        target += stride;
-    }
-}
+MAKE_BLEND_FILL_FUNCTION(uint8_t, 1)
+MAKE_BLEND_FILL_FUNCTION(uint16_t, 2)
+MAKE_BLEND_FILL_FUNCTION(uint32_t, 4)
 
 void BlendFillRect(Surface surface, const Rect* rect, Color color) {
     const uint8_t bpp = surface.format->bytesPerPixel;
