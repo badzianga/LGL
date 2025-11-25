@@ -14,10 +14,11 @@ static inline void Memset4(void* ptr, uint32_t value, size_t n) {
 static void FillRect1(uint8_t* target, int stride, int w, int h, uint32_t color) {
     const int quads = w >> 2;
     const int remaining = w & 3;
+    const int offset = quads << 2;
 
     while (h--) {
         Memset4(target, color, quads);
-        uint8_t* pixel = target + (quads << 2);
+        uint8_t* pixel = target + offset;
         int n = remaining;
         while (n--) {
             *pixel++ = color;
@@ -29,11 +30,12 @@ static void FillRect1(uint8_t* target, int stride, int w, int h, uint32_t color)
 static void FillRect2(uint8_t* target, int stride, int w, int h, uint32_t color) {
     const int pairs = w >> 1;
     const int odd = w & 1;
+    const int offset = pairs << 2;
 
     while (h--) {
         Memset4(target, color, pairs);
         if (odd) {
-            *(uint16_t*)(target + (pairs << 2)) = (uint16_t)color;
+            *(uint16_t*)(target + offset) = (uint16_t)color;
         }
         target += stride;
     }
