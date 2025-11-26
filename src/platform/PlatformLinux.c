@@ -1,9 +1,12 @@
 #include <stdbool.h>
 #include <string.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 #include <time.h>
 #include <unistd.h>
 #include <X11/keysym.h>
 #include <X11/Xlib.h>
+#include <X11/extensions/XShm.h>
 
 #include "Input.h"
 #include "Window.h"
@@ -20,6 +23,7 @@ typedef struct Platform {
     Atom wmDeleteWindow;
     XImage* image;
     GC gc;
+    XShmSegmentInfo shmInfo;
 } Platform;
 
 typedef struct TimeHandling {
@@ -280,6 +284,8 @@ static void InitTimer(void);
 static void FrameTick(void);
 
 Surface WindowInit(int width, int height, const char* title) {
+    if (width <= 0 || height <= 0 || title == NULL) return (Surface){ 0 };
+
     platform.display = XOpenDisplay(NULL);
     if (platform.display == NULL) {
         return (Surface){ 0 };
@@ -302,25 +308,44 @@ Surface WindowInit(int width, int height, const char* title) {
         ExposureMask;
     XSelectInput(platform.display, platform.window, eventMask);
 
-    platform.surface = SurfaceCreate(width, height, &FORMAT_ARGB8888);
     WindowSetTitle(title);
 
     platform.wmDeleteWindow = XInternAtom(platform.display, "WM_DELETE_WINDOW", False);
     XSetWMProtocols(platform.display, platform.window, &platform.wmDeleteWindow, 1);
 
-    platform.image = XCreateImage(
+    platform.image = XShmCreateImage(
         platform.display,
         XDefaultVisual(platform.display, platform.screen),
         XDefaultDepth(platform.display, platform.screen),
         ZPixmap,
-        0,
-        platform.surface.pixels,
+        NULL,
+        &platform.shmInfo,
         width,
-        height,
-        platform.surface.format->bytesPerPixel * 8,
-        0
+        height
     );
     platform.gc = XCreateGC(platform.display, platform.window, 0, NULL);
+
+    // WindowInit on X11 uses shared memory for faster displaying, so user's allocator is not used here
+    Surface surface = {
+        .width = width,
+        .height = height,
+        .pixels = NULL,
+        .stride = width * FORMAT_ARGB8888.bytesPerPixel,
+        .padding = 0,
+        .format = &FORMAT_ARGB8888
+    };
+    platform.surface = surface;
+    platform.shmInfo.shmid = shmget(
+        IPC_PRIVATE,
+        platform.image->bytes_per_line * platform.image->height,
+        IPC_CREAT | 0777
+    );
+    platform.shmInfo.shmaddr =
+        platform.image->data =
+        platform.surface.pixels = shmat(platform.shmInfo.shmid, NULL, 0);
+    platform.shmInfo.readOnly = False;
+    XShmAttach(platform.display, &platform.shmInfo);
+    shmctl(platform.shmInfo.shmid, IPC_RMID, 0);
 
     XMapWindow(platform.display, platform.window);
 
@@ -330,6 +355,8 @@ Surface WindowInit(int width, int height, const char* title) {
 }
 
 void WindowDestroy() {
+    XShmDetach(platform.display, &platform.shmInfo);
+    shmdt(platform.shmInfo.shmaddr);
     XUnmapWindow(platform.display, platform.window);
     XCloseDisplay(platform.display);
 }
@@ -452,7 +479,7 @@ void WindowBeginFrame() {
 }
 
 void WindowEndFrame() {
-    XPutImage(
+    XShmPutImage(
         platform.display,
         platform.window,
         platform.gc,
@@ -460,7 +487,8 @@ void WindowEndFrame() {
         0, 0,
         0, 0,
         platform.surface.width,
-        platform.surface.height
+        platform.surface.height,
+        False
     );
 
     XSync(platform.display, False);
