@@ -3,6 +3,7 @@
 #include "BlendFillRect.h"
 #include "Draw.h"
 #include "FillRect.h"
+#include "internal/Inlines.h"
 
 static void SetPixel(uint8_t* pixel, uint32_t color, uint8_t bpp) {
     switch (bpp) {
@@ -28,7 +29,7 @@ static uint32_t GetPixelValue(const uint8_t* pixel, uint8_t bpp) {
     }
 }
 
-static Color BlendColors(Color c1, Color c2) {
+static Color BlendColorz(Color c1, Color c2) {
     const uint8_t a = c1.a;
     const uint8_t invA = 255 - a;
 
@@ -51,30 +52,88 @@ void DrawRect(Surface surface, int x, int y, int w, int h, Color color) {
     }
 }
 
-void DrawCircle(Surface surface, int x, int y, int r, Color color) {
-    if (color.a == 0) return;
+static inline void FillHLine(Surface surface, int y, int x0, int x1, uint32_t color) {
+    if (y < 0 || y >= surface.height) return;
 
-    const uint8_t bpp = surface.format->bytesPerPixel;
-    const uint32_t pixelColor = ColorToPixel(surface.format, color);
+    if (x0 < 0) x0 = 0;
+    if (x1 > surface.width) x1 = surface.width;
+    if (x0 >= x1) return;
 
-    for (int yi = y - r; yi <= y + r; ++yi) {
-        if (yi < 0 || yi >= surface.height) continue;
-        for (int xi = x - r; xi <= x + r; ++xi) {
-            if (xi < 0 || xi >= surface.width) continue;
-            const int dx = xi - x;
-            const int dy = yi - y;
-            if (dx * dx + dy * dy > r * r) continue;
-            uint8_t* pixel = surface.pixels + (yi * surface.width + xi) * bpp;
+    const int bpp = surface.format->bytesPerPixel;
+    const int w = x1 - x0;
 
-            if (color.a == 255) {
-                SetPixel(pixel, pixelColor, bpp);
+    uint8_t* row = (uint8_t*)surface.pixels + y * surface.stride + x0 * bpp;
+
+    switch (bpp) {
+        case 1: {
+            color |= color << 8;
+            color |= color << 16;
+            const int quads = w >> 2;
+            const int offset = quads << 2;
+            int rest  = w & 3;
+            Memset4(row, color, quads);
+            uint8_t* p = row + offset;
+            while (rest--) {
+                *p++ = (uint8_t)color;
             }
-            else {
-                const Color surfColor = PixelToColor(surface.format, GetPixelValue(pixel, bpp));
-                const uint32_t blendedPixel = ColorToPixel(surface.format, BlendColors(color, surfColor));
-                SetPixel(pixel, blendedPixel, bpp);
+        } break;
+        case 2: {
+            color |= color << 16;
+            const int pairs = w >> 1;
+            const int offset = pairs << 2;
+            const int odd = w & 1;
+            Memset4(row, color, pairs);
+            if (odd) {
+                *(uint16_t*)(row + offset) = (uint16_t)color;
             }
+        } break;
+        case 4: {
+            Memset4(row, color, w);
+        } break;
+        default: break;
+    }
+}
+
+// Based on https://stackoverflow.com/questions/10878209/midpoint-circle-algorithm-for-filled-circles by colinday
+static void FillCircle(Surface surface, int cx, int cy, int r, uint32_t color) {
+    int x = r;
+    int y = 0;
+    int d = 1 - x;
+
+    while (x >= y) {
+        int startX = cx - x;
+        int endX = cx + x;
+        FillHLine(surface, cy + y, startX, endX, color);
+        if (y != 0) {
+            FillHLine(surface, cy - y, startX, endX, color);
         }
+        ++y;
+
+        if (d < 0) {
+            d += (y << 1) + 1;
+        }
+        else {
+            if (x >= y) {
+                startX = cx - y + 1;
+                endX = cx + y - 1;
+                FillHLine(surface, cy + x, startX, endX, color);
+                FillHLine(surface, cy - x, startX, endX, color);
+            }
+            --x;
+            d += (y - x + 1) << 1;
+        }
+    }
+}
+
+static void BlendFillCircle(Surface surface, int x, int y, int r, Color color) {}
+
+void DrawCircle(Surface surface, int x, int y, int r, Color color) {
+    if (r <= 0 || color.a == 0) return;
+    if (color.a == 255) {
+        FillCircle(surface, x, y, r, ColorToPixel(surface.format, color));
+    }
+    else {
+        BlendFillCircle(surface, x, y, r, color);
     }
 }
 
@@ -91,7 +150,7 @@ static void FillFlatLine(Surface surface, int x1, int x2, int y, Color color) {
         }
         else {
             const Color surfColor = PixelToColor(surface.format, GetPixelValue(pixel, bpp));
-            const uint32_t blendedPixel = ColorToPixel(surface.format, BlendColors(color, surfColor));
+            const uint32_t blendedPixel = ColorToPixel(surface.format, BlendColorz(color, surfColor));
             SetPixel(pixel, blendedPixel, bpp);
         }
     }
@@ -196,7 +255,7 @@ void DrawLine(Surface surface, int x1, int y1, int x2, int y2, Color color) {
                 }
                 else {
                     const Color surfColor = PixelToColor(surface.format, GetPixelValue(pixel, bpp));
-                    const uint32_t blendedPixel = ColorToPixel(surface.format, BlendColors(color, surfColor));
+                    const uint32_t blendedPixel = ColorToPixel(surface.format, BlendColorz(color, surfColor));
                     SetPixel(pixel, blendedPixel, bpp);
                 }
             }
@@ -216,7 +275,7 @@ void DrawLine(Surface surface, int x1, int y1, int x2, int y2, Color color) {
                 }
                 else {
                     const Color surfColor = PixelToColor(surface.format, GetPixelValue(pixel, bpp));
-                    const uint32_t blendedPixel = ColorToPixel(surface.format, BlendColors(color, surfColor));
+                    const uint32_t blendedPixel = ColorToPixel(surface.format, BlendColorz(color, surfColor));
                     SetPixel(pixel, blendedPixel, bpp);
                 }
             }
