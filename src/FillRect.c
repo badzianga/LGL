@@ -77,7 +77,7 @@ static void FillRect1(uint8_t* target, int stride, int w, int h, uint32_t color)
         uint8_t* pixel = target + offset;
         int n = remaining;
         while (n--) {
-            *pixel++ = color;
+            *pixel++ = (uint8_t)color;
         }
         target += stride;
     }
