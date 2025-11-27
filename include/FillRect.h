@@ -9,6 +9,7 @@ extern "C" {
 #endif  // __cplusplus
 
 void FillRect(Surface surface, const Rect* rect, uint32_t color);
+void BlendFillRect(Surface surface, const Rect* rect, Color color);
 
 #ifdef __cplusplus
 }

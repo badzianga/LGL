@@ -1,6 +1,5 @@
 #include <stdlib.h>
 
-#include "BlendFillRect.h"
 #include "Draw.h"
 #include "FillRect.h"
 #include "internal/Inlines.h"

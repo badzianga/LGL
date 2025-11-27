@@ -2,7 +2,6 @@
 #include <string.h>
 
 #include "Allocator.h"
-#include "BlendFillRect.h"
 #include "Color.h"
 #include "FillRect.h"
 #include "PixelFormat.h"
