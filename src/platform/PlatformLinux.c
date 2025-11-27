@@ -491,6 +491,8 @@ void WindowEndFrame() {
         False
     );
 
+    XSync(platform.display, False);
+
     FrameTick();
 }
 
