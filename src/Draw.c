@@ -4,7 +4,7 @@
 #include "FillRect.h"
 #include "internal/Inlines.h"
 
-static void SetPixel(uint8_t* pixel, uint32_t color, uint8_t bpp) {
+static inline void SetPixel(uint8_t* pixel, uint32_t color, uint8_t bpp) {
     switch (bpp) {
         case 1: {
             *(uint8_t*)pixel = (uint8_t)color;
@@ -19,25 +19,13 @@ static void SetPixel(uint8_t* pixel, uint32_t color, uint8_t bpp) {
     }
 }
 
-static uint32_t GetPixelValue(const uint8_t* pixel, uint8_t bpp) {
+static inline uint32_t GetPixelValue(const uint8_t* pixel, uint8_t bpp) {
     switch (bpp) {
         case 1: return *(uint8_t*)pixel;
         case 2: return *(uint16_t*)pixel;
         case 4: return *(uint32_t*)pixel;
         default: return 0;
     }
-}
-
-static Color BlendColorz(Color c1, Color c2) {
-    const uint8_t a = c1.a;
-    const uint8_t invA = 255 - a;
-
-    return (Color){
-        .r = (c1.r * a + c2.r * invA) / 255,
-        .g = (c1.g * a + c2.g * invA) / 255,
-        .b = (c1.b * a + c2.b * invA) / 255,
-        .a = 255
-    };
 }
 
 void DrawRect(Surface surface, int x, int y, int w, int h, Color color) {
@@ -51,7 +39,7 @@ void DrawRect(Surface surface, int x, int y, int w, int h, Color color) {
     }
 }
 
-static inline void FillHLine(Surface surface, int y, int x0, int x1, uint32_t color) {
+static void FillHLine(Surface surface, int y, int x0, int x1, uint32_t color) {
     if (y < 0 || y >= surface.height) return;
 
     if (x0 < 0) x0 = 0;
@@ -206,26 +194,7 @@ void DrawCircle(Surface surface, int x, int y, int r, Color color) {
     }
 }
 
-static void FillFlatLine(Surface surface, int x1, int x2, int y, Color color) {
-    const uint32_t pixelColor = ColorToPixel(surface.format, color);
-    const uint8_t bpp = surface.format->bytesPerPixel;
-
-    for (int x = x1; x < x2; ++x) {
-        if (x < 0 || x >= surface.width) continue;
-        uint8_t* pixel = surface.pixels + (y * surface.width + x) * bpp;
-
-        if (color.a == 255) {
-            SetPixel(pixel, pixelColor, bpp);
-        }
-        else {
-            const Color surfColor = PixelToColor(surface.format, GetPixelValue(pixel, bpp));
-            const uint32_t blendedPixel = ColorToPixel(surface.format, BlendColorz(color, surfColor));
-            SetPixel(pixel, blendedPixel, bpp);
-        }
-    }
-}
-
-static void FillBottomFlatTriangle(Surface surface, int x1, int y1, int x2, int y2, int x3, int y3, Color color) {
+static void FillBottomFlatTriangle(Surface surface, int x1, int y1, int x2, int y2, int x3, int y3, uint32_t color) {
     const float invSlope1 = (float)(x2 - x1) / (float)(y2 - y1);
     const float invSlope2 = (float)(x3 - x1) / (float)(y3 - y1);
 
@@ -234,13 +203,13 @@ static void FillBottomFlatTriangle(Surface surface, int x1, int y1, int x2, int 
 
     for (int scanlineY = y1; scanlineY <= y2; ++scanlineY) {
         if (scanlineY < 0 || scanlineY >= surface.height) continue;
-        FillFlatLine(surface, (int)curX1, (int)curX2, scanlineY, color);
+        FillHLine(surface, scanlineY, (int)curX1, (int)curX2, color);
         curX1 += invSlope1;
         curX2 += invSlope2;
     }
 }
 
-static void FillTopFlatTriangle(Surface surface, int x1, int y1, int x2, int y2, int x3, int y3, Color color) {
+static void FillTopFlatTriangle(Surface surface, int x1, int y1, int x2, int y2, int x3, int y3, uint32_t color) {
     const float invSlope1 = (float)(x3 - x1) / (float)(y3 - y1);
     const float invSlope2 = (float)(x3 - x2) / (float)(y3 - y2);
 
@@ -249,7 +218,7 @@ static void FillTopFlatTriangle(Surface surface, int x1, int y1, int x2, int y2,
 
     for (int scanlineY = y3; scanlineY > y1; --scanlineY) {
         if (scanlineY < 0 || scanlineY >= surface.height) continue;
-        FillFlatLine(surface, (int)curX1, (int)curX2, scanlineY, color);
+        FillHLine(surface, scanlineY, (int)curX1, (int)curX2, color);
         curX1 -= invSlope1;
         curX2 -= invSlope2;
     }
@@ -283,21 +252,22 @@ static void SwapInts(int* a, int* b) {
 
 void DrawTriangle(Surface surface, int x1, int y1, int x2, int y2, int x3, int y3, Color color) {
     SortTrianglePointsAscendingByY(&x1, &y1, &x2, &y2, &x3, &y3);
+    const uint32_t c = ColorToPixel(surface.format, color);
 
     if (y2 == y3) {
         if (x2 > x3) SwapInts(&x2, &x3);
-        FillBottomFlatTriangle(surface, x1, y1, x2, y2, x3, y3, color);
+        FillBottomFlatTriangle(surface, x1, y1, x2, y2, x3, y3, c);
     }
     else if (y1 == y2) {
         if (x1 > x2) SwapInts(&x1, &x2);
-        FillTopFlatTriangle(surface, x1, y1, x2, y2, x3, y3, color);
+        FillTopFlatTriangle(surface, x1, y1, x2, y2, x3, y3, c);
     }
     else {
         int x4 = x1 + (int)(((float)(y2 - y1) / (float)(y3 - y1)) * (float)(x3 - x1));
         const int y4 = y2;
         if (x2 > x4) SwapInts(&x2, &x4);
-        FillBottomFlatTriangle(surface, x1, y1, x2, y2, x4, y4, color);
-        FillTopFlatTriangle(surface, x2, y2, x4, y4, x3, y3, color);
+        FillBottomFlatTriangle(surface, x1, y1, x2, y2, x4, y4, c);
+        FillTopFlatTriangle(surface, x2, y2, x4, y4, x3, y3, c);
     }
 }
 
