@@ -290,63 +290,31 @@ void DrawTriangle(Surface surface, int x1, int y1, int x2, int y2, int x3, int y
 }
 
 void DrawLine(Surface surface, int x1, int y1, int x2, int y2, Color color) {
+    const uint32_t c = ColorToPixel(surface.format, color);
     const uint8_t bpp = surface.format->bytesPerPixel;
-    const uint32_t pixelColor = ColorToPixel(surface.format, color);
 
-    const int dx = x2 - x1;
-    const int dy = y2 - y1;
+    const int dx = abs(x2 - x1);
+    const int sx = x1 < x2 ? 1 : -1;
+    const int dy = -abs(y2 - y1);
+    const int sy = y1 < y2 ? 1 : -1;
 
-    if (dx != 0) {  // non-vertical line
-        if (abs(dx) >= abs(dy)) {  // slope less or equal to 1
-            const int x2Original = x2;
-            if (x1 > x2) SwapInts(&x1, &x2);
-            for (int x = x1; x < x2; ++x) {
-                if (x < 0 || x >= surface.width) continue;
-                const int y = y2 + dy * (x - x2Original) / dx;
-                if (y < 0 || y >= surface.height) continue;
+    int err = dx + dy;
 
-                uint8_t* pixel = surface.pixels + (y * surface.width + x) * bpp;
-
-                if (color.a == 255) {
-                    SetPixel(pixel, pixelColor, bpp);
-                }
-                else {
-                    const Color surfColor = PixelToColor(surface.format, GetPixelValue(pixel, bpp));
-                    const uint32_t blendedPixel = ColorToPixel(surface.format, BlendColorz(color, surfColor));
-                    SetPixel(pixel, blendedPixel, bpp);
-                }
-            }
+    while (x1 != x2 && y1 != y2) {
+        if (x1 >= 0 && x1 < surface.width && y1 >= 0 && y1 < surface.height) {
+            uint8_t* pixel = (uint8_t*)surface.pixels + y1 * surface.stride + x1 * bpp;
+            SetPixel(pixel, c, bpp);
         }
-        else {  // slope greater than 1
-            const int y2Original = y2;
-            if (y1 > y2) SwapInts(&y1, &y2);
-            for (int y = y1; y < y2; ++y) {
-                if (y < 0 || y >= surface.height) continue;
-                const int x = x2 + dx * (y - y2Original) / dy;
-                if (x < 0 || x >= surface.width) continue;
 
-                uint8_t* pixel = surface.pixels + (y * surface.width + x) * bpp;
+        const int e2 = err << 1;
 
-                if (color.a == 255) {
-                    SetPixel(pixel, pixelColor, bpp);
-                }
-                else {
-                    const Color surfColor = PixelToColor(surface.format, GetPixelValue(pixel, bpp));
-                    const uint32_t blendedPixel = ColorToPixel(surface.format, BlendColorz(color, surfColor));
-                    SetPixel(pixel, blendedPixel, bpp);
-                }
-            }
+        if (e2 >= dy) {
+            err += dy;
+            x1 += sx;
         }
-    }
-    else {  // vertical line
-        const int x = x2;
-        if (x < 0 || x >= surface.width) return;
-        if (y1 > y2) SwapInts(&y1, &y2);
-        for (int y = y1; y < y2; ++y) {
-            if (y < 0 || y >= surface.height) continue;
-
-            uint8_t* pixel = surface.pixels + (y * surface.width + x) * bpp;
-            SetPixel(pixel, pixelColor, bpp);
+        if (e2 <= dx) {
+            err += dx;
+            y1 += sy;
         }
     }
 }
