@@ -93,27 +93,47 @@ static inline void FillHLine(Surface surface, int y, int x0, int x1, uint32_t co
     }
 }
 
-#define MAKE_BLEND_FILL_FUNCTION(TYPE, BYTES)                                                   \
-static inline void BlendFillHLine##BYTES(Surface surface, int y, int x0, int x1, Color color) { \
-    if (y < 0 || y >= surface.height) return;                                                   \
-    if (x0 < 0) x0 = 0;                                                                         \
-    if (x1 > surface.width) x1 = surface.width;                                                 \
-    if (x0 >= x1) return;                                                                       \
-    const uint8_t a = color.a;                                                                  \
-    const uint8_t invA = 255 - a;                                                               \
-    uint8_t* row = (uint8_t*)surface.pixels + y * surface.stride + x0 * BYTES;                  \
-    TYPE* pixel = (TYPE*)row;                                                                          \
-    int n = x1 - x0;                                                                            \
-    while (n--) {                                                                               \
-        Color c = PixelToColor(surface.format, *pixel);                                         \
-        c = BlendColors(color, c, a, invA);                                                     \
-        *pixel++ = (TYPE)ColorToPixel(surface.format, c);                                       \
-    }                                                                                           \
-}
+static void BlendFillHLine(Surface surface, int y, int x0, int x1, Color color) { \
+    if (y < 0 || y >= surface.height) return;
 
-MAKE_BLEND_FILL_FUNCTION(uint8_t, 1)
-MAKE_BLEND_FILL_FUNCTION(uint16_t, 2)
-MAKE_BLEND_FILL_FUNCTION(uint32_t, 4)
+    if (x0 < 0) x0 = 0;
+    if (x1 > surface.width) x1 = surface.width;
+    if (x0 >= x1) return;
+
+    const uint8_t bpp = surface.format->bytesPerPixel;
+    const uint8_t a = color.a;
+    const uint8_t invA = 255 - a;
+
+    uint8_t* row = (uint8_t*)surface.pixels + y * surface.stride + x0 * bpp;
+    int n = x1 - x0;
+    switch (bpp) {
+        case 1: {
+            uint8_t* pixel = row;
+            while (n--) {
+                Color c = PixelToColor(surface.format, *pixel);
+                c = BlendColors(color, c, a, invA);
+                *pixel++ = (uint8_t)ColorToPixel(surface.format, c);
+            }
+        } break;
+        case 2: {
+            uint16_t* pixel = (uint16_t*)row;
+            while (n--) {
+                Color c = PixelToColor(surface.format, *pixel);
+                c = BlendColors(color, c, a, invA);
+                *pixel++ = (uint16_t)ColorToPixel(surface.format, c);
+            }
+        } break;
+        case 4: {
+            uint32_t* pixel = (uint32_t*)row;
+            while (n--) {
+                Color c = PixelToColor(surface.format, *pixel);
+                c = BlendColors(color, c, a, invA);
+                *pixel++ = ColorToPixel(surface.format, c);
+            }
+        } break;
+        default: break;
+    }
+}
 
 // Based on https://stackoverflow.com/questions/10878209/midpoint-circle-algorithm-for-filled-circles by colinday
 static void FillCircle(Surface surface, int cx, int cy, int r, uint32_t color) {
@@ -151,20 +171,12 @@ static void BlendFillCircle(Surface surface, int cx, int cy, int r, Color color)
     int y = 0;
     int d = 1 - x;
 
-    void (*BlendFillHLineFunction)(Surface surface, int y, int x0, int x1, Color color) = NULL;
-    switch (surface.format->bytesPerPixel) {
-        case 1: BlendFillHLineFunction = &BlendFillHLine1; break;
-        case 2: BlendFillHLineFunction = &BlendFillHLine2; break;
-        case 4: BlendFillHLineFunction = &BlendFillHLine4; break;
-        default: return;
-    }
-
     while (x >= y) {
         int startX = cx - x;
         int endX = cx + x;
-        BlendFillHLineFunction(surface, cy + y, startX, endX, color);
+        BlendFillHLine(surface, cy + y, startX, endX, color);
         if (y != 0) {
-            BlendFillHLineFunction(surface, cy - y, startX, endX, color);
+            BlendFillHLine(surface, cy - y, startX, endX, color);
         }
         ++y;
 
@@ -175,8 +187,8 @@ static void BlendFillCircle(Surface surface, int cx, int cy, int r, Color color)
             if (x >= y) {
                 startX = cx - y + 1;
                 endX = cx + y - 1;
-                BlendFillHLineFunction(surface, cy + x, startX, endX, color);
-                BlendFillHLineFunction(surface, cy - x, startX, endX, color);
+                BlendFillHLine(surface, cy + x, startX, endX, color);
+                BlendFillHLine(surface, cy - x, startX, endX, color);
             }
             --x;
             d += (y - x + 1) << 1;
