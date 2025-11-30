@@ -1,4 +1,4 @@
-#include <stdlib.h>
+#include <assert.h>
 #include <string.h>
 
 #include "Allocator.h"
@@ -19,7 +19,7 @@ Surface SurfaceCreate(int width, int height, const PixelFormat* format) {
     }
     memset(pixels, 0, stride * height);
 
-    return (Surface){ width, height, pixels, stride, 0, format };
+    return (Surface){ width, height, pixels, stride, SURFACE_FLAG_NONE, format };
 }
 
 Surface SurfaceCreateFromBuffer(int width, int height, const PixelFormat* format, void* buffer) {
@@ -29,7 +29,7 @@ Surface SurfaceCreateFromBuffer(int width, int height, const PixelFormat* format
 
     const int stride = width * format->bytesPerPixel;
 
-    return (Surface){ width, height, buffer, stride, 0, format };
+    return (Surface){ width, height, buffer, stride, SURFACE_FLAG_NONE, format };
 }
 
 void SurfaceDestroy(Surface* surface) {
@@ -291,8 +291,11 @@ static void BlitDifferentFormatA(Surface dest, Surface src, int x, int y) {
 
 void SurfaceBlit(Surface dest, Surface src, int x, int y) {
     if (dest.format == src.format) {
-        if (dest.format->aMask != 0) {
+        if (src.flags & SURFACE_FLAG_BLIT_BLENDED) {
             BlitSameFormatA(dest, src, x, y);
+        }
+        else if (src.flags & SURFACE_FLAG_HAS_ALPHA) {
+            assert(0 && "TODO: not implemented");
         }
         else {
             BlitSameFormat(dest, src, x, y);

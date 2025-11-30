@@ -331,7 +331,7 @@ Surface WindowInit(int width, int height, const char* title) {
         .height = height,
         .pixels = NULL,
         .stride = width * FORMAT_ARGB8888.bytesPerPixel,
-        .padding = 0,
+        .flags = SURFACE_FLAG_NONE,
         .format = &FORMAT_ARGB8888
     };
     platform.surface = surface;

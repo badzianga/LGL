@@ -7,12 +7,19 @@
 extern "C" {
 #endif  // __cplusplus
 
+typedef enum SurfaceFlags {
+    SURFACE_FLAG_NONE         = 0,
+    SURFACE_FLAG_LOCKED       = (1 << 0),  // unused yet
+    SURFACE_FLAG_HAS_ALPHA    = (1 << 1),
+    SURFACE_FLAG_BLIT_BLENDED = (1 << 2),
+} SurfaceFlags;
+
 typedef struct Surface {
     int width;
     int height;
     void* pixels;
     int stride;
-    uint32_t padding;  // TODO: currently unused, in the future it will store flags
+    SurfaceFlags flags;
     const PixelFormat* format;
 } Surface;
 
