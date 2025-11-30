@@ -111,19 +111,19 @@ void SurfaceFill(Surface surface, Color color) {
 static void BlitSameFormat(Surface dest, Surface src, int x, int y) {
     const int bpp = src.format->bytesPerPixel;
 
-    for (int sy = 0; sy < src.height; ++sy) {
-        const int dy = y + sy;
-        if (dy < 0 || dy >= dest.height) continue;
-        for (int sx = 0; sx < src.width; ++sx) {
-            const int dx = x + sx;
-            if (dx < 0 || dx >= dest.width) continue;
-            const uint8_t* srcPixel = (uint8_t*)src.pixels + sy * src.stride + sx * bpp;
-            uint8_t* destPixel = (uint8_t*)dest.pixels + dy * dest.stride + dx * bpp;
+    const Rect destRect = { 0, 0, dest.width, dest.height };
+    const Rect srcRect = { x, y, src.width, src.height };
+    Rect clipped;
+    if (!RectIntersection(&srcRect, &destRect, &clipped)) return;
 
-            for (int b = 0; b < bpp; ++b) {
-                destPixel[b] = srcPixel[b];
-            }
-        }
+    int h = clipped.height;
+    const int w = clipped.width * bpp;
+    uint8_t* dstRow = dest.pixels + clipped.y * dest.stride + clipped.x * bpp;
+    const uint8_t* srcRow = src.pixels + (clipped.y - y) * src.stride + (clipped.x - x) * bpp;
+    while (h--) {
+        memcpy(dstRow, srcRow, w);
+        dstRow += dest.stride;
+        srcRow += src.stride;
     }
 }
 
