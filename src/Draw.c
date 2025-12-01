@@ -19,15 +19,6 @@ static inline void SetPixel(uint8_t* pixel, uint32_t color, uint8_t bpp) {
     }
 }
 
-static inline uint32_t GetPixelValue(const uint8_t* pixel, uint8_t bpp) {
-    switch (bpp) {
-        case 1: return *(uint8_t*)pixel;
-        case 2: return *(uint16_t*)pixel;
-        case 4: return *(uint32_t*)pixel;
-        default: return 0;
-    }
-}
-
 void DrawRect(Surface surface, int x, int y, int w, int h, Color color) {
     const Rect rect = { x, y, w, h };
     if (color.a == 0) return;
