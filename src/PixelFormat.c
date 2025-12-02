@@ -163,7 +163,7 @@ uint32_t ColorToPixel(const PixelFormat* format, Color color) {
     uint32_t b = (color.b >> format->bLoss) << format->bShift;
     uint32_t a = (color.a >> format->aLoss) << format->aShift;
 
-    return (r & format->rMask) | (g & format->gMask) | (b & format->bMask) | (a & format->aMask);
+    return r | g | b | a;
 }
 
 Color PixelToColor(const PixelFormat* format, uint32_t pixel) {
