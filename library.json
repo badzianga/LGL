@@ -4,6 +4,6 @@
     "build": {
         "includeDir": "include",
         "srcDir": "src",
-        "srcFilter": ["+<*>", "-<Font.c>", "-<Image.c>", "-<platform/*>"]
+        "srcFilter": ["+<*>", "-<Font.c>", "-<Image.c>", "-<platform/*>", "+<platform/PlatformESP32_ST7789.cpp>"]
     }
 }
