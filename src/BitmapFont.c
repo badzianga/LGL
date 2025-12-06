@@ -218,3 +218,29 @@ void DrawTextBitmapFont(Surface surface, int x, int y, const char* text, const B
         ++text;
     }
 }
+
+void MeasureBitmapFontText(const char* text, const BitmapFont* font, int* outWidth, int* outHeight) {
+    if (!text || !font || !font->data) {
+        if (outWidth) *outWidth = 0;
+        if (outHeight) *outHeight = 0;
+        return;
+    }
+
+    int width = 0;
+    int maxWidth = 0;
+    int lines = (*text != '\0');
+
+    char c;
+    while ((c = *text++)) {
+        if (c == '\n') {
+            if (width > maxWidth) maxWidth = width;
+            width = 0;
+            lines++;
+            continue;
+        }
+        width += font->charWidth;
+    }
+
+    if (outWidth) *outWidth = maxWidth;
+    if (outHeight) *outHeight = font->charHeight * lines;
+}
