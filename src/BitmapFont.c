@@ -3,7 +3,7 @@
 
 // Based on Thick 8x8 (https://frostyfreeze.itch.io/pixel-bitmap-fonts-png-xml) 
 static const uint8_t defaultBitmapFontData[] = {
-    0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,  // 
+    // 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,  //
     0b11000000, 0b11000000, 0b11000000, 0b11000000, 0b11000000, 0b00000000, 0b11000000, 0b00000000,  // !
     0b11011000, 0b11011000, 0b11011000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,  // "
     0b01101100, 0b01101100, 0b11111110, 0b01101100, 0b11111110, 0b01101100, 0b01101100, 0b00000000,  // #
@@ -109,7 +109,7 @@ const BitmapFont DEFAULT_BITMAP_FONT = {
     .charWidth = 8,
     .charHeight = 8,
     .data = defaultBitmapFontData,
-    .firstChar = ' ',
+    .firstChar = '!',
     .lastChar = '~',
 };
 
