@@ -121,12 +121,12 @@ static void BlitGlyphToSurface(Surface surface, const FT_Bitmap* bitmap, int dst
     }
 }
 
-void DrawFontChar(Surface surface, int x, int y, char c, Font* font, Color color) {
+void DrawFontChar(Surface surface, int x, int y, char c, const Font* font, Color color) {
     const char s[2] = { c, '\0' };
     DrawFontText(surface, x, y, s, font, color);
 }
 
-void DrawFontText(Surface surface, int x, int y, const char* text, Font* font, Color color) {
+void DrawFontText(Surface surface, int x, int y, const char* text, const Font* font, Color color) {
     if (surface.pixels == NULL || font == NULL || font->internal == NULL) return;
     FT_Face face = font->internal;
     hb_font_t* hbFont = font->hbFont;
@@ -180,6 +180,62 @@ void DrawFontText(Surface surface, int x, int y, const char* text, Font* font, C
     }
 
     hb_buffer_destroy(buf);
+}
+
+void MeasureFontText(const char* text, const Font* font, int* outWidth, int* outHeight) {
+    if (!text || !font || !font->internal || !font->hbFont) {
+        if (outWidth) *outWidth = 0;
+        if (outHeight) *outHeight = 0;
+        return;
+    }
+
+    FT_Face face = (FT_Face)font->internal;
+    hb_font_t* hbFont = (hb_font_t*)font->hbFont;
+
+    int maxWidth = 0;
+    int lines = 1;
+
+    const int asc = (int)(face->size->metrics.ascender >> 6);
+    const int desc = (int)(face->size->metrics.descender >> 6);
+    int lineHeight = asc - desc;
+    if (lineHeight < 0) lineHeight = -lineHeight;
+    if (*text == '\0') lineHeight = 0;
+
+    const char* start = text;
+
+    for (const char* p = text; ; ++p) {
+        if (*p != '\n' && *p != '\0') continue;
+
+        const size_t len = p - start;
+
+        if (len > 0) {
+            hb_buffer_t* buf = hb_buffer_create();
+            hb_buffer_add_utf8(buf, start, (int)len, 0, (int)len);
+            hb_buffer_guess_segment_properties(buf);
+            hb_shape(hbFont, buf, NULL, 0);
+
+            unsigned int glyphCount;
+            hb_glyph_position_t* pos = hb_buffer_get_glyph_positions(buf, &glyphCount);
+
+            int lineWidth = 0;
+            for (unsigned int i = 0; i < glyphCount; i++) {
+                lineWidth += (pos[i].x_advance >> 6);
+            }
+
+            if (lineWidth > maxWidth)
+                maxWidth = lineWidth;
+
+            hb_buffer_destroy(buf);
+        }
+
+        if (*p == '\0') break;
+
+        lines++;
+        start = p + 1;
+    }
+
+    if (outWidth) *outWidth = maxWidth;
+    if (outHeight) *outHeight = lines * lineHeight;
 }
 
 void ShutdownFontModule() {
