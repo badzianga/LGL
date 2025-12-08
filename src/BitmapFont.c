@@ -114,108 +114,103 @@ const BitmapFont DEFAULT_BITMAP_FONT = {
 };
 
 void DrawCharBitmapFont(Surface surface, int x, int y, char c, const BitmapFont* font, Color color) {
-    if (c < font->firstChar || c > font->lastChar) return;
-    if (color.a == 0) return;
-
-    const uint32_t colorValue = ColorToPixel(surface.format, color);
-    const int charIndex = c - font->firstChar;
-    const int cw = font->charWidth;
-    const int ch = font->charHeight;
-    const int bpp = surface.format->bytesPerPixel;
-
-    const uint8_t* glyphData = font->data + charIndex * ((cw * ch + 7) / 8);
-
-    if (surface.format->aMask != 0 && color.a != 255) {  // draw character with alpha blending
-        for (int row = 0; row < ch; ++row) {
-            for (int col = 0; col < cw; ++col) {
-                const int bitIndex = row * cw + col;
-                const int byteIndex = bitIndex / 8;
-                const int bit = 7 - (bitIndex % 8);
-
-                if (glyphData[byteIndex] & (1 << bit)) {
-                    const int px = x + col;
-                    const int py = y + row;
-
-                    if (px < 0 || py < 0 || px >= surface.width || py >= surface.height) continue;
-
-                    uint8_t* pixel = (uint8_t*)surface.pixels + (py * surface.width + px) * bpp;
-                    Color pixelColor = { 0 };
-                    switch (bpp) {
-                        case 1: {
-                            pixelColor = PixelToColor(surface.format, *pixel);
-                        } break;
-                        case 2: {
-                            pixelColor = PixelToColor(surface.format, *(uint16_t*)pixel);
-                        } break;
-                        case 4: {
-                            pixelColor = PixelToColor(surface.format, *(uint32_t*)pixel);
-                        } break;
-                        default: break;
-                    }
-
-                    const uint8_t a = color.a;
-                    const uint8_t invA = 255 - a;
-
-                    const Color out = {
-                        .r = (color.r * a + pixelColor.r * invA) / 255,
-                        .g = (color.g * a + pixelColor.g * invA) / 255,
-                        .b = (color.b * a + pixelColor.b * invA) / 255,
-                        .a = 255
-                        // .a = (srcColor.a + dstColor.a * (255 - srcColor.a) / 255)
-                    };
-                    const uint32_t outColor = ColorToPixel(surface.format, out);
-
-                    for (int b = 0; b < bpp; ++b) {
-                        pixel[b] = ((uint8_t*)&outColor)[b];
-                    }
-                }
-            }
-        }
-    }
-    else {  // draw character casually
-        for (int row = 0; row < ch; ++row) {
-            for (int col = 0; col < cw; ++col) {
-                const int bitIndex = row * cw + col;
-                const int byteIndex = bitIndex / 8;
-                const int bit = 7 - (bitIndex % 8);
-
-                if (glyphData[byteIndex] & (1 << bit)) {
-                    const int px = x + col;
-                    const int py = y + row;
-
-                    if (px < 0 || py < 0 || px >= surface.width || py >= surface.height) continue;
-
-                    uint8_t* pixel = (uint8_t*)surface.pixels + (py * surface.width + px) * bpp;
-                    switch (bpp) {
-                        case 1: {
-                            *pixel = (uint8_t)colorValue;
-                        } break;
-                        case 2: {
-                            *(uint16_t*)pixel = (uint16_t)colorValue;
-                        } break;
-                        case 4: {
-                            *(uint32_t*)pixel = colorValue;
-                        } break;
-                        default: break;
-                    }
-                }
-            }
-        }
-    }
+    const char s[2] = { c, '\0' };
+    DrawTextBitmapFont(surface, x, y, s, font, color);
 }
 
 void DrawTextBitmapFont(Surface surface, int x, int y, const char* text, const BitmapFont* font, Color color) {
-    int cx = x;
-    while (*text) {
-        if (*text == '\n') {
-            y += font->charHeight;
-            cx = x;
+    const int charW = font->charWidth;
+    const int charH = font->charHeight;
+
+    const int bpp = surface.format->bytesPerPixel;
+    const uint32_t colorValue = ColorToPixel(surface.format, color);
+
+    int cursorX = x;
+    int cursorY = y;
+
+    char c;
+    while ((c = *text++)) {
+        if (c == '\n') {
+            cursorX = x;
+            cursorY += charH;
+            continue;
         }
+
+        const int glyphIndex = c - font->firstChar;
+        const int glyphX = cursorX;
+        const int glyphY = cursorY;
+
+        const int left = glyphX;
+        const int top = glyphY;
+        const int right = glyphX + charW;
+        const int bottom = glyphY + charH;
+
+        // glyph completely offscreen
+        if (right <= 0 || left >= surface.width || bottom <= 0 || top >= surface.height) {
+            cursorX += charW;
+            continue;
+        }
+
+        // glyph is fully inside the surface
+        if (left >= 0 && top >= 0 && right <= surface.width && bottom <= surface.height) {
+            for (int gy = 0; gy < charH; ++gy) {
+                const uint8_t rowBits = font->data[glyphIndex * charH + gy];
+                const int dstY = glyphY + gy;
+                const int dstIndex = dstY * surface.stride + glyphX * bpp;
+
+                for (int gx = 0; gx < charW; ++gx) {
+                    if (rowBits & (1 << (7 - gx))) {
+                        uint8_t* pixel = (uint8_t*)surface.pixels + dstIndex + gx * bpp;
+                        switch (bpp) {
+                            case 1: {
+                                *pixel = (uint8_t)colorValue;
+                            } break;
+                            case 2: {
+                                *(uint16_t*)pixel = (uint16_t)colorValue;
+                            } break;
+                            case 4: {
+                                *(uint32_t*)pixel = colorValue;
+                            } break;
+                            default: break;
+                        }
+                    }
+                }
+            }
+        }
+        // glyph is partially visible
         else {
-            DrawCharBitmapFont(surface, cx, y, *text, font, color);
-            cx += font->charWidth;
+            const int startX = left < 0 ? 0 : left;
+            const int endX = right  > surface.width ? surface.width : right;
+
+            const int startY = top < 0 ? 0 : top;
+            const int endY = bottom > surface.height ? surface.height : bottom;
+
+            for (int py = startY; py < endY; ++py) {
+                const int gy = py - glyphY;
+                const uint8_t rowBits = font->data[glyphIndex * charH + gy];
+
+                for (int px = startX; px < endX; ++px) {
+                    const int gx = px - glyphX;
+
+                    if (rowBits & (1 << (7 - gx))) {
+                        uint8_t* pixel = (uint8_t*)surface.pixels + py * surface.stride + px * bpp;
+                        switch (bpp) {
+                            case 1: {
+                                *pixel = (uint8_t)colorValue;
+                            } break;
+                            case 2: {
+                                *(uint16_t*)pixel = (uint16_t)colorValue;
+                            } break;
+                            case 4: {
+                                *(uint32_t*)pixel = colorValue;
+                            } break;
+                            default: break;
+                        }
+                    }
+                }
+            }
         }
-        ++text;
+        cursorX += charW;
     }
 }
 
