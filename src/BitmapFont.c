@@ -1,4 +1,5 @@
 #include "BitmapFont.h"
+#include "internal/Inlines.h"
 #include "PixelFormat.h"
 
 // Based on Thick 8x8 (https://frostyfreeze.itch.io/pixel-bitmap-fonts-png-xml) 
@@ -118,12 +119,12 @@ void DrawCharBitmapFont(Surface surface, int x, int y, char c, const BitmapFont*
     DrawTextBitmapFont(surface, x, y, s, font, color);
 }
 
-void DrawTextBitmapFont(Surface surface, int x, int y, const char* text, const BitmapFont* font, Color color) {
+// This is bad, lots of code is duplicated, but it's hard for me to make it clean and performant
+static void FillText(Surface surface, int x, int y, const char* text, const BitmapFont* font, uint32_t colorValue) {
     const int charW = font->charWidth;
     const int charH = font->charHeight;
 
     const int bpp = surface.format->bytesPerPixel;
-    const uint32_t colorValue = ColorToPixel(surface.format, color);
 
     int cursorX = x;
     int cursorY = y;
@@ -211,6 +212,127 @@ void DrawTextBitmapFont(Surface surface, int x, int y, const char* text, const B
             }
         }
         cursorX += charW;
+    }
+}
+
+static void BlendText(Surface surface, int x, int y, const char* text, const BitmapFont* font, Color color) {
+    const int charW = font->charWidth;
+    const int charH = font->charHeight;
+
+    const int bpp = surface.format->bytesPerPixel;
+
+    int cursorX = x;
+    int cursorY = y;
+
+    char c;
+    while ((c = *text++)) {
+        if (c == '\n') {
+            cursorX = x;
+            cursorY += charH;
+            continue;
+        }
+
+        const int glyphIndex = c - font->firstChar;
+        const int glyphX = cursorX;
+        const int glyphY = cursorY;
+
+        const int left = glyphX;
+        const int top = glyphY;
+        const int right = glyphX + charW;
+        const int bottom = glyphY + charH;
+
+        // glyph completely offscreen
+        if (right <= 0 || left >= surface.width || bottom <= 0 || top >= surface.height) {
+            cursorX += charW;
+            continue;
+        }
+
+        const int a = color.a;
+        const int invA = 255 - a;
+
+        // glyph is fully inside the surface
+        if (left >= 0 && top >= 0 && right <= surface.width && bottom <= surface.height) {
+            for (int gy = 0; gy < charH; ++gy) {
+                const uint8_t rowBits = font->data[glyphIndex * charH + gy];
+                const int dstY = glyphY + gy;
+                const int dstIndex = dstY * surface.stride + glyphX * bpp;
+
+                for (int gx = 0; gx < charW; ++gx) {
+                    if (rowBits & (1 << (7 - gx))) {
+                        uint8_t* pixel = (uint8_t*)surface.pixels + dstIndex + gx * bpp;
+                        switch (bpp) {
+                            case 1: {
+                                Color dst = PixelToColor(surface.format, *pixel);
+                                dst = BlendColors(color, dst, a, invA);
+                                *pixel = (uint8_t)ColorToPixel(surface.format, dst);
+                            } break;
+                            case 2: {
+                                Color dst = PixelToColor(surface.format, *(uint16_t*)pixel);
+                                dst = BlendColors(color, dst, a, invA);
+                                *(uint16_t*)pixel = (uint16_t)ColorToPixel(surface.format, dst);
+                            } break;
+                            case 4: {
+                                Color dst = PixelToColor(surface.format, *(uint32_t*)pixel);
+                                dst = BlendColors(color, dst, a, invA);
+                                *(uint32_t*)pixel = ColorToPixel(surface.format, dst);
+                            } break;
+                            default: break;
+                        }
+                    }
+                }
+            }
+        }
+        // glyph is partially visible
+        else {
+            const int startX = left < 0 ? 0 : left;
+            const int endX = right  > surface.width ? surface.width : right;
+
+            const int startY = top < 0 ? 0 : top;
+            const int endY = bottom > surface.height ? surface.height : bottom;
+
+            for (int py = startY; py < endY; ++py) {
+                const int gy = py - glyphY;
+                const uint8_t rowBits = font->data[glyphIndex * charH + gy];
+
+                for (int px = startX; px < endX; ++px) {
+                    const int gx = px - glyphX;
+
+                    if (rowBits & (1 << (7 - gx))) {
+                        uint8_t* pixel = (uint8_t*)surface.pixels + py * surface.stride + px * bpp;
+                        switch (bpp) {
+                            case 1: {
+                                Color dst = PixelToColor(surface.format, *pixel);
+                                dst = BlendColors(color, dst, a, invA);
+                                *pixel = (uint8_t)ColorToPixel(surface.format, dst);
+                            } break;
+                            case 2: {
+                                Color dst = PixelToColor(surface.format, *(uint16_t*)pixel);
+                                dst = BlendColors(color, dst, a, invA);
+                                *(uint16_t*)pixel = (uint16_t)ColorToPixel(surface.format, dst);
+                            } break;
+                            case 4: {
+                                Color dst = PixelToColor(surface.format, *(uint32_t*)pixel);
+                                dst = BlendColors(color, dst, a, invA);
+                                *(uint32_t*)pixel = ColorToPixel(surface.format, dst);
+                            } break;
+                            default: break;
+                        }
+                    }
+                }
+            }
+        }
+        cursorX += charW;
+    }
+}
+
+void DrawTextBitmapFont(Surface surface, int x, int y, const char* text, const BitmapFont* font, Color color) {
+    if (!surface.pixels || !surface.format || !text || !font || color.a == 0) return;
+
+    if (color.a == 255) {
+        FillText(surface, x, y, text, font, ColorToPixel(surface.format, color));
+    }
+    else {
+        BlendText(surface, x, y, text, font, color);
     }
 }
 
