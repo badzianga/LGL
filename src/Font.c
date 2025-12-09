@@ -145,7 +145,18 @@ void DrawFontText(Surface surface, int x, int y, const char* text, const Font* f
     long penX = x;
     long penY = baseline;
 
+    const int asc = (int)(face->size->metrics.ascender >> 6);
+    const int desc = (int)(face->size->metrics.descender >> 6);
+    int lineHeight = asc - desc;
+    if (lineHeight < 0) lineHeight = -lineHeight;
+
     for (uint32_t i = 0; i < glyphCount; i++) {
+        if (text[glyphInfo[i].cluster] == '\n') {
+            penX = x;
+            penY += lineHeight;
+            continue;
+        }
+
         const hb_glyph_info_t gi = glyphInfo[i];
         const hb_glyph_position_t gp = glyphPos[i];
 
