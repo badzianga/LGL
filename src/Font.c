@@ -50,7 +50,7 @@ void FontFree(Font* font) {
     font->size = 0;
 }
 
-static int ComputeBaselineFromTop(FT_Face face, int topY) {
+static inline int ComputeBaselineFromTop(FT_Face face, int topY) {
     return topY + (face->size != 0 ? (int)(face->size->metrics.ascender >> 6) : 0);
 }
 
