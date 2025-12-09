@@ -3,6 +3,7 @@
 #include FT_FREETYPE_H
 
 #include "Font.h"
+#include "internal/Inlines.h"
 
 static FT_Library ftLibrary = NULL;
 
@@ -54,41 +55,6 @@ static inline int ComputeBaselineFromTop(FT_Face face, int topY) {
     return topY + (face->size != 0 ? (int)(face->size->metrics.ascender >> 6) : 0);
 }
 
-static void BlendPixel(uint8_t* dst, Color color, uint8_t bpp, const PixelFormat* format) {
-    Color dstColor;
-    switch (bpp) {
-        case 1: {
-            dstColor = PixelToColor(format, *dst);
-        } break;
-        case 2: {
-            dstColor = PixelToColor(format, *(uint16_t*)dst);
-        } break;
-        case 4: {
-            dstColor = PixelToColor(format, *(uint32_t*)dst);
-        } break;
-        default: {
-            dstColor = (Color){ 0 };
-        } break;
-    }
-
-    const int sa = color.a;
-    const int da = dstColor.a;
-    const int invSa = 255 - sa;
-
-    const Color outColor = {
-        (uint8_t)((color.r * sa + dstColor.r * invSa) / 255),
-        (uint8_t)((color.g * sa + dstColor.g * invSa) / 255),
-        (uint8_t)((color.b * sa + dstColor.b * invSa) / 255),
-        (uint8_t)((sa + da * invSa / 255))
-    };
-
-    const uint32_t outPixel = ColorToPixel(format, outColor);
-
-    for (int b = 0; b < bpp; b++) {
-        dst[b] = ((uint8_t*)&outPixel)[b];
-    }
-}
-
 static void BlitGlyphToSurface(Surface surface, const FT_Bitmap* bitmap, int dstX, int dstY, Color color) {
     if (bitmap == NULL || bitmap->buffer == NULL) return;
 
@@ -102,10 +68,13 @@ static void BlitGlyphToSurface(Surface surface, const FT_Bitmap* bitmap, int dst
     if (dstY < 0) startY = -dstY;
     int endX = bmW;
     int endY = bmH;
-    // TODO: should it be >= ?
     if (dstX + bmW > surface.width) endX = surface.width - dstX;
     if (dstY + bmH > surface.height) endY = surface.height - dstY;
     if (startX >= endX || startY >= endY) return;
+
+    const int a = color.a;
+    const int invA = 255 - a;
+    const uint32_t fullColor = ColorToPixel(surface.format, color);
 
     for (int gy = startY; gy < endY; ++gy) {
         const int sy = dstY + gy;
@@ -116,7 +85,42 @@ static void BlitGlyphToSurface(Surface surface, const FT_Bitmap* bitmap, int dst
             if (glyphAlpha == 0) continue;
             const uint8_t combinedAlpha = (uint16_t)glyphAlpha * (uint16_t)color.a / 255;
             if (combinedAlpha == 0) continue;
-            BlendPixel(&row[sx], (Color){ color.r, color.g, color.b, combinedAlpha }, bpp, surface.format);
+            uint8_t* dst = row + sx;
+            if (combinedAlpha == 255) {
+                switch (bpp) {
+                    case 1: {
+                        *dst = (uint8_t)fullColor;
+                    } break;
+                    case 2: {
+                        *(uint16_t*)dst = (uint16_t)fullColor;
+                    } break;
+                    case 4: {
+                        *(uint32_t*)dst = fullColor;
+                    } break;
+                    default: break;
+                }
+            }
+            else {
+                const Color newColor = { color.r, color.g, color.b, combinedAlpha };
+                switch (bpp) {
+                    case 1: {
+                        Color c = PixelToColor(surface.format, *dst);
+                        c = BlendColors(newColor, c, a, invA);
+                        *dst = (uint8_t)ColorToPixel(surface.format, c);
+                    } break;
+                    case 2: {
+                        Color c = PixelToColor(surface.format, *(uint16_t*)dst);
+                        c = BlendColors(newColor, c, a, invA);
+                        *(uint16_t*)dst = (uint16_t)ColorToPixel(surface.format, c);
+                    } break;
+                    case 4: {
+                        Color c = PixelToColor(surface.format, *(uint32_t*)dst);
+                        c = BlendColors(newColor, c, a, invA);
+                        *(uint32_t*)dst = ColorToPixel(surface.format, c);
+                    } break;
+                    default: break;
+                }
+            }
         }
     }
 }
@@ -226,7 +230,7 @@ void MeasureFontText(const char* text, const Font* font, int* outWidth, int* out
             hb_shape(hbFont, buf, NULL, 0);
 
             unsigned int glyphCount;
-            hb_glyph_position_t* pos = hb_buffer_get_glyph_positions(buf, &glyphCount);
+            const hb_glyph_position_t* pos = hb_buffer_get_glyph_positions(buf, &glyphCount);
 
             int lineWidth = 0;
             for (unsigned int i = 0; i < glyphCount; i++) {
