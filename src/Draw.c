@@ -48,7 +48,7 @@ static void FillHLine(Surface surface, int y, int x0, int x1, uint32_t color) {
             color |= color << 16;
             const int quads = w >> 2;
             const int offset = quads << 2;
-            int rest  = w & 3;
+            int rest = w & 3;
             Memset4(row, color, quads);
             uint8_t* p = row + offset;
             while (rest--) {
@@ -72,7 +72,7 @@ static void FillHLine(Surface surface, int y, int x0, int x1, uint32_t color) {
     }
 }
 
-static void BlendFillHLine(Surface surface, int y, int x0, int x1, Color color) { \
+static void BlendFillHLine(Surface surface, int y, int x0, int x1, Color color) {
     if (y < 0 || y >= surface.height) return;
 
     if (x0 < 0) x0 = 0;
@@ -185,36 +185,6 @@ void DrawCircle(Surface surface, int x, int y, int r, Color color) {
     }
 }
 
-static void FillBottomFlatTriangle(Surface surface, int x1, int y1, int x2, int y2, int x3, int y3, uint32_t color) {
-    const float invSlope1 = (float)(x2 - x1) / (float)(y2 - y1);
-    const float invSlope2 = (float)(x3 - x1) / (float)(y3 - y1);
-
-    float curX1 = (float)x1;
-    float curX2 = (float)x1;
-
-    for (int scanlineY = y1; scanlineY <= y2; ++scanlineY) {
-        if (scanlineY < 0 || scanlineY >= surface.height) continue;
-        FillHLine(surface, scanlineY, (int)curX1, (int)curX2, color);
-        curX1 += invSlope1;
-        curX2 += invSlope2;
-    }
-}
-
-static void FillTopFlatTriangle(Surface surface, int x1, int y1, int x2, int y2, int x3, int y3, uint32_t color) {
-    const float invSlope1 = (float)(x3 - x1) / (float)(y3 - y1);
-    const float invSlope2 = (float)(x3 - x2) / (float)(y3 - y2);
-
-    float curX1 = (float)x3;
-    float curX2 = (float)x3;
-
-    for (int scanlineY = y3; scanlineY > y1; --scanlineY) {
-        if (scanlineY < 0 || scanlineY >= surface.height) continue;
-        FillHLine(surface, scanlineY, (int)curX1, (int)curX2, color);
-        curX1 -= invSlope1;
-        curX2 -= invSlope2;
-    }
-}
-
 static void SortTrianglePointsAscendingByY(int* x1, int* y1, int* x2, int* y2, int* x3, int* y3) {
     if (*y1 > *y3) {
         const int tx = *x1, ty = *y1;
@@ -241,24 +211,60 @@ static void SwapInts(int* a, int* b) {
     *b = temp;
 }
 
+static void FillTriangleFlatTop(Surface surface, int x1, int x2, int y1_2, int x3, int y3, uint32_t color) {
+    const int dy = y3 - y1_2;
+
+    int xl = x1 << 16;
+    int xr = x2 << 16;
+
+    const int dx1 = ((x3 - x1) << 16) / dy;
+    const int dx2 = ((x3 - x2) << 16) / dy;
+
+    for (int y = y1_2; y <= y3; ++y) {
+        FillHLine(surface, y, xl >> 16, xr >> 16, color);
+        xl += dx1;
+        xr += dx2;
+    }
+}
+
+static void FillTriangleFlatBottom(Surface surface, int x1, int y1, int x2, int x3, int y2_3, uint32_t color) {
+    const int dy = y2_3 - y1;
+
+    int xl = x1 << 16;
+    int xr = x1 << 16;
+
+    const int dx1 = ((x2 - x1) << 16) / dy;
+    const int dx2 = ((x3 - x1) << 16) / dy;
+
+    for (int y = y1; y <= y2_3; ++y) {
+        FillHLine(surface, y, xl >> 16, xr >> 16, color);
+        xl += dx1;
+        xr += dx2;
+    }
+}
+
 void DrawTriangle(Surface surface, int x1, int y1, int x2, int y2, int x3, int y3, Color color) {
     SortTrianglePointsAscendingByY(&x1, &y1, &x2, &y2, &x3, &y3);
     const uint32_t c = ColorToPixel(surface.format, color);
 
     if (y2 == y3) {
-        if (x2 > x3) SwapInts(&x2, &x3);
-        FillBottomFlatTriangle(surface, x1, y1, x2, y2, x3, y3, c);
+        if (x2 > x3) {
+            SwapInts(&x2, &x3);
+        }
+        FillTriangleFlatBottom(surface, x1, y1, x2, x3, y3, c);
     }
     else if (y1 == y2) {
-        if (x1 > x2) SwapInts(&x1, &x2);
-        FillTopFlatTriangle(surface, x1, y1, x2, y2, x3, y3, c);
+        if (x1 > x2) {
+            SwapInts(&x1, &x2);
+        }
+        FillTriangleFlatTop(surface, x1, x2, y2, x3, y3, c);
     }
     else {
+        // TODO: use fixed point arithmetic here
         int x4 = x1 + (int)(((float)(y2 - y1) / (float)(y3 - y1)) * (float)(x3 - x1));
-        const int y4 = y2;
-        if (x2 > x4) SwapInts(&x2, &x4);
-        FillBottomFlatTriangle(surface, x1, y1, x2, y2, x4, y4, c);
-        FillTopFlatTriangle(surface, x2, y2, x4, y4, x3, y3, c);
+        if (x2 > x4) SwapInts(&x4, &x2);
+        FillTriangleFlatBottom(surface, x1, y1, x2, x4, y2, c);
+        FillTriangleFlatTop(surface, x2, x4, y2, x3, y3, c);
     }
 }
 
