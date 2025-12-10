@@ -211,6 +211,8 @@ static void SwapInts(int* a, int* b) {
     *b = temp;
 }
 
+// TODO: check if making exact copy of fill functions but for blending really enhances performance
+
 static void FillTriangleFlatTop(Surface surface, int x1, int x2, int y1_2, int x3, int y3, uint32_t color) {
     const int dy = y3 - y1_2;
 
@@ -243,7 +245,40 @@ static void FillTriangleFlatBottom(Surface surface, int x1, int y1, int x2, int 
     }
 }
 
+static void BlendTriangleFlatTop(Surface surface, int x1, int x2, int y1_2, int x3, int y3, Color color) {
+    const int dy = y3 - y1_2;
+
+    int xl = x1 << 16;
+    int xr = x2 << 16;
+
+    const int dx1 = ((x3 - x1) << 16) / dy;
+    const int dx2 = ((x3 - x2) << 16) / dy;
+
+    for (int y = y1_2; y <= y3; ++y) {
+        BlendFillHLine(surface, y, xl >> 16, xr >> 16, color);
+        xl += dx1;
+        xr += dx2;
+    }
+}
+
+static void BlendTriangleFlatBottom(Surface surface, int x1, int y1, int x2, int x3, int y2_3, Color color) {
+    const int dy = y2_3 - y1;
+
+    int xl = x1 << 16;
+    int xr = x1 << 16;
+
+    const int dx1 = ((x2 - x1) << 16) / dy;
+    const int dx2 = ((x3 - x1) << 16) / dy;
+
+    for (int y = y1; y <= y2_3; ++y) {
+        BlendFillHLine(surface, y, xl >> 16, xr >> 16, color);
+        xl += dx1;
+        xr += dx2;
+    }
+}
+
 void DrawTriangle(Surface surface, int x1, int y1, int x2, int y2, int x3, int y3, Color color) {
+    if (color.a == 0) return;
     SortTrianglePointsAscendingByY(&x1, &y1, &x2, &y2, &x3, &y3);
     const uint32_t c = ColorToPixel(surface.format, color);
 
@@ -251,20 +286,36 @@ void DrawTriangle(Surface surface, int x1, int y1, int x2, int y2, int x3, int y
         if (x2 > x3) {
             SwapInts(&x2, &x3);
         }
-        FillTriangleFlatBottom(surface, x1, y1, x2, x3, y3, c);
+        if (color.a == 255) {
+            FillTriangleFlatBottom(surface, x1, y1, x2, x3, y3, c);
+        }
+        else {
+            BlendTriangleFlatBottom(surface, x1, y1, x2, x3, y3, color);
+        }
     }
     else if (y1 == y2) {
         if (x1 > x2) {
             SwapInts(&x1, &x2);
         }
-        FillTriangleFlatTop(surface, x1, x2, y2, x3, y3, c);
+        if (color.a == 255) {
+            FillTriangleFlatTop(surface, x1, x2, y2, x3, y3, c);
+        }
+        else {
+            BlendTriangleFlatTop(surface, x1, x2, y2, x3, y3, color);
+        }
     }
     else {
         // TODO: use fixed point arithmetic here
         int x4 = x1 + (int)(((float)(y2 - y1) / (float)(y3 - y1)) * (float)(x3 - x1));
         if (x2 > x4) SwapInts(&x4, &x2);
-        FillTriangleFlatBottom(surface, x1, y1, x2, x4, y2, c);
-        FillTriangleFlatTop(surface, x2, x4, y2, x3, y3, c);
+        if (color.a == 255) {
+            FillTriangleFlatBottom(surface, x1, y1, x2, x4, y2 - 1, c);
+            FillTriangleFlatTop(surface, x2, x4, y2, x3, y3, c);
+        }
+        else {
+            BlendTriangleFlatBottom(surface, x1, y1, x2, x4, y2 - 1, color);
+            BlendTriangleFlatTop(surface, x2, x4, y2, x3, y3, color);
+        }
     }
 }
 
