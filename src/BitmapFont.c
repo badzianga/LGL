@@ -136,6 +136,10 @@ static void FillText(Surface surface, int x, int y, const char* text, const Bitm
             cursorY += charH;
             continue;
         }
+        if (c < font->firstChar || c > font->lastChar) {
+            cursorX += charW;
+            continue;
+        }
 
         const int glyphIndex = c - font->firstChar;
         const int glyphX = cursorX;
@@ -229,6 +233,10 @@ static void BlendText(Surface surface, int x, int y, const char* text, const Bit
         if (c == '\n') {
             cursorX = x;
             cursorY += charH;
+            continue;
+        }
+        if (c < font->firstChar || c > font->lastChar) {
+            cursorX += charW;
             continue;
         }
 
