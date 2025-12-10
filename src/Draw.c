@@ -4,21 +4,6 @@
 #include "FillRect.h"
 #include "internal/Inlines.h"
 
-static inline void SetPixel(uint8_t* pixel, uint32_t color, uint8_t bpp) {
-    switch (bpp) {
-        case 1: {
-            *(uint8_t*)pixel = (uint8_t)color;
-        } break;
-        case 2: {
-            *(uint16_t*)pixel = (uint16_t)color;
-        } break;
-        case 4: {
-            *(uint32_t*)pixel = (uint32_t)color;
-        } break;
-        default: break;
-    }
-}
-
 void DrawRect(Surface surface, int x, int y, int w, int h, Color color) {
     const Rect rect = { x, y, w, h };
     if (color.a == 0) return;
@@ -319,8 +304,47 @@ void DrawTriangle(Surface surface, int x1, int y1, int x2, int y2, int x3, int y
     }
 }
 
+static inline void SetPixel(uint8_t* pixel, uint32_t color, uint8_t bpp) {
+    switch (bpp) {
+        case 1: {
+            *pixel = (uint8_t)color;
+        } break;
+        case 2: {
+            *(uint16_t*)pixel = (uint16_t)color;
+        } break;
+        case 4: {
+            *(uint32_t*)pixel = color;
+        } break;
+        default: break;
+    }
+}
+
+static inline void BlendPixel(uint8_t* pixel, Color color, int a, int invA, uint8_t bpp, const PixelFormat* format) {
+    switch (bpp) {
+        case 1: {
+            Color c = PixelToColor(format, *pixel);
+            c = BlendColors(color, c, a, invA);
+            *pixel = (uint8_t)ColorToPixel(format, c);
+        } break;
+        case 2: {
+            Color c = PixelToColor(format, *(uint16_t*)pixel);
+            c = BlendColors(color, c, a, invA);
+            *(uint16_t*)pixel = (uint16_t)ColorToPixel(format, c);
+        } break;
+        case 4: {
+            Color c = PixelToColor(format, *(uint32_t*)pixel);
+            c = BlendColors(color, c, a, invA);
+            *(uint32_t*)pixel = ColorToPixel(format, c);
+        } break;
+        default: break;
+    }
+}
+
 void DrawLine(Surface surface, int x1, int y1, int x2, int y2, Color color) {
+    if (color.a == 0) return;
     const uint32_t c = ColorToPixel(surface.format, color);
+    const int a = color.a;
+    const int invA = 255 - a;
     const uint8_t bpp = surface.format->bytesPerPixel;
 
     const int dx = abs(x2 - x1);
@@ -333,7 +357,12 @@ void DrawLine(Surface surface, int x1, int y1, int x2, int y2, Color color) {
     while (x1 != x2 && y1 != y2) {
         if (x1 >= 0 && x1 < surface.width && y1 >= 0 && y1 < surface.height) {
             uint8_t* pixel = (uint8_t*)surface.pixels + y1 * surface.stride + x1 * bpp;
-            SetPixel(pixel, c, bpp);
+            if (a == 255) {
+                SetPixel(pixel, c, bpp);
+            }
+            else {
+                BlendPixel(pixel, color, a, invA, bpp, surface.format);
+            }
         }
 
         const int e2 = err << 1;
