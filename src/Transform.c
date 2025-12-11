@@ -3,22 +3,30 @@
 #include "Allocator.h"
 #include "Transform.h"
 
+#define MAKE_FLIP_X_FUNCTION(TYPE, BYTES)                                    \
+static void TransformFlipX##BYTES(Surface surface) {                         \
+    const int last = surface.width - 1;                                      \
+    for (int y = 0; y < surface.height; ++y) {                               \
+        TYPE* row = (TYPE*)((uint8_t*)surface.pixels + surface.stride * y);  \
+        for (int x = 0; x < (surface.width >> 1); ++x) {                     \
+            const int xEnd = last - x;                                       \
+            TYPE tmp = row[x];                                               \
+            row[x] = row[xEnd];                                              \
+            row[xEnd] = tmp;                                                 \
+        }                                                                    \
+    }                                                                        \
+}
+
+MAKE_FLIP_X_FUNCTION(uint8_t, 1);
+MAKE_FLIP_X_FUNCTION(uint16_t, 2);
+MAKE_FLIP_X_FUNCTION(uint32_t, 4);
+
 void TransformFlipX(Surface surface) {
-    const uint8_t bpp = surface.format->bytesPerPixel;
-
-    for (int y = 0; y < surface.height; y++) {
-        for (int x = 0; x < surface.width / 2; x++) {
-            const int xEnd = surface.width - x - 1;
-
-            uint8_t* left = (uint8_t*)surface.pixels + (y * surface.width + x) * bpp;
-            uint8_t* right = (uint8_t*)surface.pixels + (y * surface.width + xEnd) * bpp;
-
-            for (int b = 0; b < bpp; ++b) {
-                const uint8_t tmp = left[b];
-                left[b] = right[b];
-                right[b] = tmp;
-            }
-        }
+    switch (surface.format->bytesPerPixel) {
+        case 1: TransformFlipX1(surface); break;
+        case 2: TransformFlipX2(surface); break;
+        case 4: TransformFlipX4(surface); break;
+        default: break;
     }
 }
 
