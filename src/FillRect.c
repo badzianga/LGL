@@ -10,6 +10,11 @@
 static void FillRect1SSE(uint8_t* target, int stride, int w, int h, uint32_t color) {
     const __m128i v = _mm_set1_epi32((int)color);
 
+    if (w == stride) {
+        w = w * h;
+        h = 1;
+    }
+
     while (h--) {
         uint8_t* row = target;
         int n = w;
@@ -30,6 +35,11 @@ static void FillRect1SSE(uint8_t* target, int stride, int w, int h, uint32_t col
 
 static void FillRect2SSE(uint8_t* target, int stride, int w, int h, uint32_t color) {
     const __m128i v = _mm_set1_epi32((int)color);
+
+    if ((w << 1) == stride) {
+        w = w * h;
+        h = 1;
+    }
 
     while (h--) {
         uint8_t* row = target;
@@ -52,6 +62,12 @@ static void FillRect2SSE(uint8_t* target, int stride, int w, int h, uint32_t col
 
 static void FillRect4SSE(uint8_t* target, int stride, int w, int h, uint32_t color) {
     const __m128i v = _mm_set1_epi32((int)color);
+
+    if ((w << 2) == stride) {
+        w = w * h;
+        h = 1;
+    }
+
     while (h--) {
         uint8_t* row = target;
         int n = w;
@@ -68,6 +84,11 @@ static void FillRect4SSE(uint8_t* target, int stride, int w, int h, uint32_t col
 }
 #else
 static void FillRect1(uint8_t* target, int stride, int w, int h, uint32_t color) {
+    if (w == stride) {
+        w = w * h;
+        h = 1;
+    }
+
     const int quads = w >> 2;
     const int remaining = w & 3;
     const int offset = quads << 2;
@@ -84,6 +105,11 @@ static void FillRect1(uint8_t* target, int stride, int w, int h, uint32_t color)
 }
 
 static void FillRect2(uint8_t* target, int stride, int w, int h, uint32_t color) {
+    if ((w << 1) == stride) {
+        w = w * h;
+        h = 1;
+    }
+
     const int pairs = w >> 1;
     const int odd = w & 1;
     const int offset = pairs << 2;
@@ -98,6 +124,11 @@ static void FillRect2(uint8_t* target, int stride, int w, int h, uint32_t color)
 }
 
 static void FillRect4(uint8_t* target, int stride, int w, int h, uint32_t color) {
+    if ((w << 2) == stride) {
+        w = w * h;
+        h = 1;
+    }
+
     while (h--) {
         Memset4(target, color, w);
         target += stride;
