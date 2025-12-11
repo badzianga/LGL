@@ -3,18 +3,18 @@
 #include "Allocator.h"
 #include "Transform.h"
 
-#define MAKE_FLIP_X_FUNCTION(TYPE, BYTES)                                    \
-static void TransformFlipX##BYTES(Surface surface) {                         \
-    const int last = surface.width - 1;                                      \
-    for (int y = 0; y < surface.height; ++y) {                               \
-        TYPE* row = (TYPE*)((uint8_t*)surface.pixels + surface.stride * y);  \
-        for (int x = 0; x < (surface.width >> 1); ++x) {                     \
-            const int xEnd = last - x;                                       \
-            TYPE tmp = row[x];                                               \
-            row[x] = row[xEnd];                                              \
-            row[xEnd] = tmp;                                                 \
-        }                                                                    \
-    }                                                                        \
+#define MAKE_FLIP_X_FUNCTION(TYPE, BYTES)                                     \
+static void TransformFlipX##BYTES(Surface surface) {                          \
+    const int last = surface.width - 1;                                       \
+    for (int y = 0; y < surface.height; ++y) {                                \
+        TYPE* left = (TYPE*)((uint8_t*)surface.pixels + surface.stride * y);  \
+        TYPE* right = left + last;                                            \
+        while (left < right) {                                                \
+            TYPE tmp = *left;                                                 \
+            *left++ = *right;                                                 \
+            *right-- = tmp;                                                   \
+        }                                                                     \
+    }                                                                         \
 }
 
 MAKE_FLIP_X_FUNCTION(uint8_t, 1);
