@@ -32,23 +32,20 @@ void TransformFlipX(Surface surface) {
 }
 
 void TransformFlipY(Surface surface) {
-    const int height = surface.height;
     const int stride = surface.stride;
+    const int lastRow = surface.height - 1;
 
+    uint8_t* top = surface.pixels;
+    uint8_t* bottom = (uint8_t*)surface.pixels + lastRow * stride;
     uint8_t* temp = AllocatorAlloc(stride);
 
-    const int half = height >> 1;
-    const int last = height - 1;
-
-    for (int y = 0; y < half; ++y) {
-        const int yEnd = last - y;
-
-        uint8_t* top = (uint8_t*)surface.pixels + y * stride;
-        uint8_t* bottom = (uint8_t*)surface.pixels + yEnd * stride;
-
+    while (top < bottom) {
         memcpy(temp, top, stride);
         memcpy(top, bottom, stride);
         memcpy(bottom, temp, stride);
+
+        top += stride;
+        bottom -= stride;
     }
 
     AllocatorFree(temp);
