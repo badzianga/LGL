@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "Allocator.h"
+#include "internal/FixedPoint.h"
 #include "Transform.h"
 
 #define MAKE_FLIP_X_FUNCTION(TYPE, BYTES)                                     \
@@ -125,12 +126,12 @@ Surface TransformRotate(Surface src, float angle) {
 #define MAKE_SCALE_FUNCTION(TYPE, BYTES)                                                                          \
 static Surface Scale##BYTES(Surface src, Surface dest, int scaleX, int scaleY, int lastSrcRow, int lastSrcCol) {  \
     for (int y = 0; y < dest.height; ++y) {                                                                       \
-        int srcY = (y * scaleY) >> 16;                                                                            \
+        int srcY = FIXED_INT_PART(y * scaleY);                                                                    \
         if (srcY >= src.height) srcY = lastSrcRow;                                                                \
         const TYPE* srcRow = (TYPE*)((uint8_t*)src.pixels + srcY * src.stride);                                   \
         TYPE* dstRow = (TYPE*)((uint8_t*)dest.pixels + y * dest.stride);                                          \
         for (int x = 0; x < dest.width; ++x) {                                                                    \
-            int srcX = (x * scaleX) >> 16;                                                                        \
+            int srcX = FIXED_INT_PART(x * scaleX);                                                                \
             if (srcX >= src.width) srcX = lastSrcCol;                                                             \
             dstRow[x] = srcRow[srcX];                                                                             \
         }                                                                                                         \
@@ -144,8 +145,8 @@ MAKE_SCALE_FUNCTION(uint32_t, 4)
 
 Surface TransformScale(Surface src, int destWidth, int destHeight) {
     const Surface dest = SurfaceCreate(destWidth, destHeight, src.format);
-    const int scaleX = (src.width << 16) / destWidth;
-    const int scaleY = (src.height << 16) / destHeight;
+    const fixed_t scaleX = FIXED_DIV(src.width, destWidth);
+    const fixed_t scaleY = FIXED_DIV(src.height, destHeight);
     const int lastSrcRow = src.height - 1;
     const int lastSrcCol = src.width - 1;
 

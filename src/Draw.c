@@ -2,6 +2,7 @@
 
 #include "Draw.h"
 #include "FillRect.h"
+#include "internal/FixedPoint.h"
 #include "internal/Inlines.h"
 
 void DrawRect(Surface surface, int x, int y, int w, int h, Color color) {
@@ -201,14 +202,14 @@ static void SwapInts(int* a, int* b) {
 static void FillTriangleFlatTop(Surface surface, int x1, int x2, int y1_2, int x3, int y3, uint32_t color) {
     const int dy = y3 - y1_2;
 
-    int xl = x1 << 16;
-    int xr = x2 << 16;
+    fixed_t xl = TO_FIXED(x1);
+    fixed_t xr = TO_FIXED(x2);
 
-    const int dx1 = ((x3 - x1) << 16) / dy;
-    const int dx2 = ((x3 - x2) << 16) / dy;
+    const fixed_t dx1 = FIXED_DIV(x3 - x1, dy);
+    const fixed_t dx2 = FIXED_DIV(x3 - x2, dy);
 
     for (int y = y1_2; y <= y3; ++y) {
-        FillHLine(surface, y, xl >> 16, xr >> 16, color);
+        FillHLine(surface, y, FIXED_INT_PART(xl), FIXED_INT_PART(xr), color);
         xl += dx1;
         xr += dx2;
     }
@@ -217,14 +218,14 @@ static void FillTriangleFlatTop(Surface surface, int x1, int x2, int y1_2, int x
 static void FillTriangleFlatBottom(Surface surface, int x1, int y1, int x2, int x3, int y2_3, uint32_t color) {
     const int dy = y2_3 - y1;
 
-    int xl = x1 << 16;
-    int xr = x1 << 16;
+    fixed_t xl = TO_FIXED(x1);
+    fixed_t xr = TO_FIXED(x1);
 
-    const int dx1 = ((x2 - x1) << 16) / dy;
-    const int dx2 = ((x3 - x1) << 16) / dy;
+    const fixed_t dx1 = FIXED_DIV(x2 - x1, dy);
+    const fixed_t dx2 = FIXED_DIV(x3 - x1, dy);
 
     for (int y = y1; y <= y2_3; ++y) {
-        FillHLine(surface, y, xl >> 16, xr >> 16, color);
+        FillHLine(surface, y, FIXED_INT_PART(xl), FIXED_INT_PART(xr), color);
         xl += dx1;
         xr += dx2;
     }
@@ -233,14 +234,14 @@ static void FillTriangleFlatBottom(Surface surface, int x1, int y1, int x2, int 
 static void BlendTriangleFlatTop(Surface surface, int x1, int x2, int y1_2, int x3, int y3, Color color) {
     const int dy = y3 - y1_2;
 
-    int xl = x1 << 16;
-    int xr = x2 << 16;
+    fixed_t xl = TO_FIXED(x1);
+    fixed_t xr = TO_FIXED(x2);
 
-    const int dx1 = ((x3 - x1) << 16) / dy;
-    const int dx2 = ((x3 - x2) << 16) / dy;
+    const fixed_t dx1 = FIXED_DIV(x3 - x1, dy);
+    const fixed_t dx2 = FIXED_DIV(x3 - x2, dy);
 
     for (int y = y1_2; y <= y3; ++y) {
-        BlendFillHLine(surface, y, xl >> 16, xr >> 16, color);
+        BlendFillHLine(surface, y, FIXED_INT_PART(xl), FIXED_INT_PART(xr), color);
         xl += dx1;
         xr += dx2;
     }
@@ -249,14 +250,14 @@ static void BlendTriangleFlatTop(Surface surface, int x1, int x2, int y1_2, int 
 static void BlendTriangleFlatBottom(Surface surface, int x1, int y1, int x2, int x3, int y2_3, Color color) {
     const int dy = y2_3 - y1;
 
-    int xl = x1 << 16;
-    int xr = x1 << 16;
+    fixed_t xl = TO_FIXED(x1);                    
+    fixed_t xr = TO_FIXED(x2);                    
 
-    const int dx1 = ((x2 - x1) << 16) / dy;
-    const int dx2 = ((x3 - x1) << 16) / dy;
+    const fixed_t dx1 = FIXED_DIV(x3 - x1, dy);   
+    const fixed_t dx2 = FIXED_DIV(x3 - x2, dy);   
 
     for (int y = y1; y <= y2_3; ++y) {
-        BlendFillHLine(surface, y, xl >> 16, xr >> 16, color);
+        BlendFillHLine(surface, y, FIXED_INT_PART(xl), FIXED_INT_PART(xr), color);
         xl += dx1;
         xr += dx2;
     }
