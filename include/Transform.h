@@ -9,7 +9,7 @@ extern "C" {
 
 void TransformFlipX(Surface surface);
 void TransformFlipY(Surface surface);
-Surface TransformRotate(Surface src, float angle);  // TODO: don't use floats, for now I can't come up with better impl
+Surface TransformRotate(Surface src, int angle);
 Surface TransformScale(Surface src, int destWidth, int destHeight);
 Surface TransformScale2x(Surface original);
 

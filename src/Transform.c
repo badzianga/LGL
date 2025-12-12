@@ -52,70 +52,119 @@ void TransformFlipY(Surface surface) {
     AllocatorFree(temp);
 }
 
-Surface TransformRotate(Surface src, float angle) {
-    const uint8_t bpp = src.format->bytesPerPixel;
+static const fixed_t sinLUT[360] = {
+    0, 1143, 2287, 3429, 4571, 5711, 6850, 7986, 9120, 10252, 11380, 12504, 13625, 14742, 15854,
+    16961, 18064, 19160, 20251, 21336, 22414, 23486, 24550, 25606, 26655, 27696, 28729, 29752, 30767, 31772,
+    32767, 33753, 34728, 35693, 36647, 37589, 38521, 39440, 40347, 41243, 42125, 42995, 43852, 44695, 45525,
+    46340, 47142, 47929, 48702, 49460, 50203, 50931, 51643, 52339, 53019, 53683, 54331, 54963, 55577, 56175,
+    56755, 57319, 57864, 58393, 58903, 59395, 59870, 60326, 60763, 61183, 61583, 61965, 62328, 62672, 62997,
+    63302, 63589, 63856, 64103, 64331, 64540, 64729, 64898, 65047, 65176, 65286, 65376, 65446, 65496, 65526,
+    65536, 65526, 65496, 65446, 65376, 65286, 65176, 65047, 64898, 64729, 64540, 64331, 64103, 63856, 63589,
+    63302, 62997, 62672, 62328, 61965, 61583, 61183, 60763, 60326, 59870, 59395, 58903, 58393, 57864, 57319,
+    56755, 56175, 55577, 54963, 54331, 53683, 53019, 52339, 51643, 50931, 50203, 49460, 48702, 47929, 47142,
+    46340, 45525, 44695, 43852, 42995, 42125, 41243, 40347, 39440, 38521, 37589, 36647, 35693, 34728, 33753,
+    32767, 31772, 30767, 29752, 28729, 27696, 26655, 25606, 24550, 23486, 22414, 21336, 20251, 19160, 18064,
+    16961, 15854, 14742, 13625, 12504, 11380, 10252, 9120, 7986, 6850, 5711, 4571, 3429, 2287, 1143,
+    0, -1143, -2287, -3429, -4571, -5711, -6850, -7986, -9120, -10252, -11380, -12504, -13625, -14742, -15854,
+    -16961, -18064, -19160, -20251, -21336, -22414, -23486, -24550, -25606, -26655, -27696, -28729, -29752, -30767, -31772,
+    -32768, -33753, -34728, -35693, -36647, -37589, -38521, -39440, -40347, -41243, -42125, -42995, -43852, -44695, -45525,
+    -46340, -47142, -47929, -48702, -49460, -50203, -50931, -51643, -52339, -53019, -53683, -54331, -54963, -55577, -56175,
+    -56755, -57319, -57864, -58393, -58903, -59395, -59870, -60326, -60763, -61183, -61583, -61965, -62328, -62672, -62997,
+    -63302, -63589, -63856, -64103, -64331, -64540, -64729, -64898, -65047, -65176, -65286, -65376, -65446, -65496, -65526,
+    -65536, -65526, -65496, -65446, -65376, -65286, -65176, -65047, -64898, -64729, -64540, -64331, -64103, -63856, -63589,
+    -63302, -62997, -62672, -62328, -61965, -61583, -61183, -60763, -60326, -59870, -59395, -58903, -58393, -57864, -57319,
+    -56755, -56175, -55577, -54963, -54331, -53683, -53019, -52339, -51643, -50931, -50203, -49460, -48702, -47929, -47142,
+    -46340, -45525, -44695, -43852, -42995, -42125, -41243, -40347, -39440, -38521, -37589, -36647, -35693, -34728, -33753,
+    -32768, -31772, -30767, -29752, -28729, -27696, -26655, -25606, -24550, -23486, -22414, -21336, -20251, -19160, -18064,
+    -16961, -15854, -14742, -13625, -12504, -11380, -10252, -9120, -7986, -6850, -5711, -4571, -3429, -2287, -1143,
+};
 
-    float rad = fmodf(angle, 360.f);
-    if (rad < 0) rad += 360.f;
-    rad = rad * (float)M_PI / 180.f;
+static inline fixed_t SinDeg(int angle) {
+    angle %= 360;
+    if (angle < 0) angle += 360;
+    return sinLUT[angle];
+}
 
-    const float cosAlpha = cosf(rad);
-    const float sinAlpha = sinf(rad);
+static inline fixed_t CosDeg(int angle) {
+    angle = (angle + 90) % 360;
+    if (angle < 0) angle += 360;
+    return sinLUT[angle];
+}
 
-    const int w = src.width;
-    const int h = src.height;
+Surface TransformRotate(Surface src, int angle) {
+    angle %= 360;
+    if (angle < 0) angle += 360;
 
-    const float hw = (float)w * 0.5f;
-    const float hh = (float)h * 0.5f;
+    const int cw = src.width;
+    const int ch = src.height;
 
-    const float corners[4][2] = {
-        {-hw, -hh},
-        { hw, -hh},
-        { hw,  hh},
-        {-hw,  hh}
-    };
+    const int cosA = CosDeg(angle);
+    const int sinA = SinDeg(angle);
 
-    float minX =  1e30f, minY =  1e30f;
-    float maxX = -1e30f, maxY = -1e30f;
+    const int cornersX[4] = {0, cw, 0, cw};
+    const int cornersY[4] = {0, 0, ch, ch};
 
-    for (int i = 0; i < 4; i++) {
-        const float x = corners[i][0];
-        const float y = corners[i][1];
-        const float rx = x * cosAlpha - y * sinAlpha;
-        const float ry = x * sinAlpha + y * cosAlpha;
+    fixed_t minX = 1 << 30;
+    fixed_t minY = 1 << 30;
+    fixed_t maxX = -1 << 30;
+    fixed_t maxY = -1 << 30;
 
-        if (rx < minX) minX = rx;
-        if (rx > maxX) maxX = rx;
-        if (ry < minY) minY = ry;
-        if (ry > maxY) maxY = ry;
+    const int bpp = src.format->bytesPerPixel;
+
+    for (int i = 0; i < 4; ++i) {
+        const int x = cornersX[i] - (cw >> 1);
+        const int y = cornersY[i] - (ch >> 1);
+
+        const fixed_t xr = FIXED_MUL(TO_FIXED(x), cosA) - FIXED_MUL(TO_FIXED(y), sinA);
+        const fixed_t yr = FIXED_MUL(TO_FIXED(x), sinA) + FIXED_MUL(TO_FIXED(y), cosA);
+
+        const fixed_t xf = FIXED_INT_PART(xr);
+        const fixed_t yf = FIXED_INT_PART(yr);
+
+        if (xf < minX) minX = xf;
+        if (xf > maxX) maxX = xf;
+        if (yf < minY) minY = yf;
+        if (yf > maxY) maxY = yf;
     }
 
-    const int newW = (int)ceilf(maxX - minX);
-    const int newH = (int)ceilf(maxY - minY);
+    const int newW = maxX - minX;
+    const int newH = maxY - minY;
 
-    Surface dst = SurfaceCreate(newW, newH, src.format);
+    const Surface dst = SurfaceCreate(newW, newH, src.format);
 
-    const float halfNewW = (float)newW * 0.5f;
-    const float halfNewH = (float)newH * 0.5f;
+    const int srcCX = cw >> 1;
+    const int srcCY = ch >> 1;
 
-    for (int y = 0; y < newH; y++) {
-        for (int x = 0; x < newW; x++) {
-            const float dx = (float)x - halfNewW;
-            const float dy = (float)y - halfNewH;
+    const int dstCX = newW >> 1;
+    const int dstCY = newH >> 1;
 
-            const float sx =  dx * cosAlpha + dy * sinAlpha + hw;
-            const float sy = -dx * sinAlpha + dy * cosAlpha + hh;
+    for (int y = 0; y < newH; ++y) {
+        for (int x = 0; x < newW; ++x) {
+            const int dx = x - dstCX;
+            const int dy = y - dstCY;
 
-            const int isx = (int)floorf(sx + 0.5f);
-            const int isy = (int)floorf(sy + 0.5f);
+            const fixed_t sxFP = FIXED_MUL(TO_FIXED(dx), cosA) + FIXED_MUL(TO_FIXED(dy), sinA) + TO_FIXED(srcCX);
+            const fixed_t syFP = -FIXED_MUL(TO_FIXED(dx), sinA) + FIXED_MUL(TO_FIXED(dy), cosA) + TO_FIXED(srcCY);
 
-            if (isx < 0 || isx >= w || isy < 0 || isy >= h) continue;
+            const int sx = FIXED_INT_PART(sxFP);
+            const int sy = FIXED_INT_PART(syFP);
 
-            uint8_t* dstPixel = (uint8_t*)dst.pixels + (y * dst.width + x) * bpp;
-            const uint8_t* srcPixel = (uint8_t*)src.pixels + (isy * src.width + isx) * bpp;
+            const uint8_t* srcPixel = (uint8_t*)src.pixels + sy * src.stride + sx * bpp;
+            uint8_t* dstPixel = (uint8_t*)dst.pixels + y * dst.stride + x * bpp;
 
-            for (int b = 0; b < bpp; ++b) {
-                dstPixel[b] = srcPixel[b];
+            if (sx >= 0 && sx < cw && sy >= 0 && sy < ch) {
+                switch (bpp) {
+                    case 1: {
+                        *dstPixel = *srcPixel;
+                    } break;
+                    case 2: {
+                        *(uint16_t*)dstPixel = *(uint16_t*)srcPixel;
+                    } break;
+                    case 4: {
+                        *(uint32_t*)dstPixel = *(uint32_t*)srcPixel;
+                    } break;
+                    default: break;
+                }
             }
         }
     }
