@@ -123,36 +123,35 @@ Surface TransformRotate(Surface src, float angle) {
 }
 
 Surface TransformScale(Surface src, int destWidth, int destHeight) {
-    Surface dest = SurfaceCreate(destWidth, destHeight, src.format);
-    const uint8_t bpp = src.format->bytesPerPixel;
+    const Surface dest = SurfaceCreate(destWidth, destHeight, src.format);
 
-    int srcY = 0;
-    int accY = 0;
+    const int bpp = src.format->bytesPerPixel;
+    const int FIX_SHIFT = 16;
+
+    const int scaleX = (src.width  << FIX_SHIFT) / destWidth;
+    const int scaleY = (src.height << FIX_SHIFT) / destHeight;
 
     for (int y = 0; y < destHeight; ++y) {
-        accY += src.height;
-        while (accY >= dest.height) {
-            accY -= dest.height;
-            ++srcY;
-            if (srcY >= src.height) srcY = src.height - 1;
-        }
+        int srcY = (y * scaleY) >> FIX_SHIFT;
+        if (srcY >= src.height) srcY = src.height - 1;
 
-        int srcX = 0;
-        int accX = 0;
+        for (int x = 0; x < destWidth; x++) {
+            int srcX = (x * scaleX) >> FIX_SHIFT;
+            if (srcX >= src.width) srcX = src.width - 1;
 
-        for (int x = 0; x < dest.width; ++x) {
-            accX += src.width;
-            while (accX >= dest.width) {
-                accX -= dest.width;
-                ++srcX;
-                if (srcX >= src.width) srcX = src.width - 1;
-            }
-
-            uint8_t* destPixel = (uint8_t*)dest.pixels + (y * destWidth + x) * bpp;
-            const uint8_t* srcPixel = (uint8_t*)src.pixels + (srcY * src.width + srcX) * bpp;
-
-            for (int b = 0; b < bpp; ++b) {
-                destPixel[b] = srcPixel[b];
+            uint8_t* destPixel = (uint8_t*)dest.pixels + y * dest.stride + x * bpp;
+            const uint8_t* srcPixel = (uint8_t*)src.pixels + srcY * src.stride + srcX * bpp;
+            switch (bpp) {
+                case 1: {
+                    *destPixel = *srcPixel;
+                } break;
+                case 2: {
+                    *(uint16_t*)destPixel = *(uint16_t*)srcPixel;
+                } break;
+                case 4: {
+                    *(uint32_t*)destPixel = *(uint32_t*)srcPixel;
+                } break;
+                default: break;
             }
         }
     }
