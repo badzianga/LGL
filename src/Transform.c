@@ -5,7 +5,7 @@
 #include "Transform.h"
 
 #define MAKE_FLIP_X_FUNCTION(TYPE, BYTES)                                     \
-static void TransformFlipX##BYTES(Surface surface) {                          \
+static void FlipX##BYTES(Surface surface) {                                   \
     const int last = surface.width - 1;                                       \
     for (int y = 0; y < surface.height; ++y) {                                \
         TYPE* left = (TYPE*)((uint8_t*)surface.pixels + surface.stride * y);  \
@@ -24,9 +24,9 @@ MAKE_FLIP_X_FUNCTION(uint32_t, 4);
 
 void TransformFlipX(Surface surface) {
     switch (surface.format->bytesPerPixel) {
-        case 1: TransformFlipX1(surface); break;
-        case 2: TransformFlipX2(surface); break;
-        case 4: TransformFlipX4(surface); break;
+        case 1: FlipX1(surface); break;
+        case 2: FlipX2(surface); break;
+        case 4: FlipX4(surface); break;
         default: break;
     }
 }
@@ -122,26 +122,20 @@ Surface TransformRotate(Surface src, float angle) {
     return dst;
 }
 
-#define MAKE_SCALE_FUNCTION(TYPE, BYTES)                                            \
-static Surface TransformScale##BYTES(Surface src, int destWidth, int destHeight) {  \
-    const Surface dest = SurfaceCreate(destWidth, destHeight, src.format);          \
-    const int bpp = src.format->bytesPerPixel;                                      \
-    const int scaleX = (src.width << 16) / destWidth;                               \
-    const int scaleY = (src.height << 16) / destHeight;                             \
-    const int lastSrcRow = src.height - 1;                                          \
-    const int lastSrcCol = src.width - 1;                                           \
-    for (int y = 0; y < destHeight; ++y) {                                          \
-        int srcY = (y * scaleY) >> 16;                                              \
-        if (srcY >= src.height) srcY = lastSrcRow;                                  \
-        const TYPE* srcRow = (TYPE*)((uint8_t*)src.pixels + srcY * src.stride);     \
-        TYPE* dstRow = (TYPE*)((uint8_t*)dest.pixels + y * dest.stride);            \
-        for (int x = 0; x < destWidth; ++x) {                                       \
-            int srcX = (x * scaleX) >> 16;                                          \
-            if (srcX >= src.width) srcX = lastSrcCol;                               \
-            dstRow[x] = srcRow[srcX];                                               \
-            }                                                                       \
-    }                                                                               \
-    return dest;                                                                    \
+#define MAKE_SCALE_FUNCTION(TYPE, BYTES)                                                                          \
+static Surface Scale##BYTES(Surface src, Surface dest, int scaleX, int scaleY, int lastSrcRow, int lastSrcCol) {  \
+    for (int y = 0; y < dest.height; ++y) {                                                                       \
+        int srcY = (y * scaleY) >> 16;                                                                            \
+        if (srcY >= src.height) srcY = lastSrcRow;                                                                \
+        const TYPE* srcRow = (TYPE*)((uint8_t*)src.pixels + srcY * src.stride);                                   \
+        TYPE* dstRow = (TYPE*)((uint8_t*)dest.pixels + y * dest.stride);                                          \
+        for (int x = 0; x < dest.width; ++x) {                                                                    \
+            int srcX = (x * scaleX) >> 16;                                                                        \
+            if (srcX >= src.width) srcX = lastSrcCol;                                                             \
+            dstRow[x] = srcRow[srcX];                                                                             \
+        }                                                                                                         \
+    }                                                                                                             \
+    return dest;                                                                                                  \
 }
 
 MAKE_SCALE_FUNCTION(uint8_t, 1)
@@ -149,11 +143,17 @@ MAKE_SCALE_FUNCTION(uint16_t, 2)
 MAKE_SCALE_FUNCTION(uint32_t, 4)
 
 Surface TransformScale(Surface src, int destWidth, int destHeight) {
+    const Surface dest = SurfaceCreate(destWidth, destHeight, src.format);
+    const int scaleX = (src.width << 16) / destWidth;
+    const int scaleY = (src.height << 16) / destHeight;
+    const int lastSrcRow = src.height - 1;
+    const int lastSrcCol = src.width - 1;
+
     switch (src.format->bytesPerPixel) {
-        case 1: return TransformScale1(src, destWidth, destHeight);
-        case 2: return TransformScale2(src, destWidth, destHeight);
-        case 4: return TransformScale4(src, destWidth, destHeight);
-        default: return SurfaceCopy(src);
+        case 1: return Scale1(src, dest, scaleX, scaleY, lastSrcRow, lastSrcCol);
+        case 2: return Scale2(src, dest, scaleX, scaleY, lastSrcRow, lastSrcCol);
+        case 4: return Scale4(src, dest, scaleX, scaleY, lastSrcRow, lastSrcCol);
+        default: return dest;
     }
 }
 
