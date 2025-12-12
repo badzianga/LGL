@@ -126,21 +126,27 @@ Surface TransformScale(Surface src, int destWidth, int destHeight) {
     const Surface dest = SurfaceCreate(destWidth, destHeight, src.format);
 
     const int bpp = src.format->bytesPerPixel;
-    const int FIX_SHIFT = 16;
 
-    const int scaleX = (src.width  << FIX_SHIFT) / destWidth;
-    const int scaleY = (src.height << FIX_SHIFT) / destHeight;
+    const int scaleX = (src.width << 16) / destWidth;
+    const int scaleY = (src.height << 16) / destHeight;
+
+    const int lastSrcRow = src.height - 1;
+    const int lastSrcCol = src.width - 1;
 
     for (int y = 0; y < destHeight; ++y) {
-        int srcY = (y * scaleY) >> FIX_SHIFT;
-        if (srcY >= src.height) srcY = src.height - 1;
+        int srcY = (y * scaleY) >> 16;
+        if (srcY >= src.height) srcY = lastSrcRow;
 
-        for (int x = 0; x < destWidth; x++) {
-            int srcX = (x * scaleX) >> FIX_SHIFT;
-            if (srcX >= src.width) srcX = src.width - 1;
+        const uint8_t* srcRow = (uint8_t*)src.pixels + srcY * src.stride;
+        uint8_t* dstRow = (uint8_t*)dest.pixels + y * dest.stride;
 
-            uint8_t* destPixel = (uint8_t*)dest.pixels + y * dest.stride + x * bpp;
-            const uint8_t* srcPixel = (uint8_t*)src.pixels + srcY * src.stride + srcX * bpp;
+        for (int x = 0; x < destWidth; ++x) {
+            int srcX = (x * scaleX) >> 16;
+            if (srcX >= src.width) srcX = lastSrcCol;
+
+            const uint8_t* srcPixel = srcRow + srcX * bpp;
+            uint8_t* destPixel = dstRow + x * bpp;
+
             switch (bpp) {
                 case 1: {
                     *destPixel = *srcPixel;
