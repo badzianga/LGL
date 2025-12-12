@@ -1,4 +1,5 @@
 #include <math.h>
+#include <string.h>
 
 #include "Allocator.h"
 #include "Transform.h"
@@ -31,22 +32,26 @@ void TransformFlipX(Surface surface) {
 }
 
 void TransformFlipY(Surface surface) {
-    const uint8_t bpp = surface.format->bytesPerPixel;
+    const int height = surface.height;
+    const int stride = surface.stride;
 
-    for (int y = 0; y < surface.height / 2; y++) {
-        const int yEnd = surface.height - y - 1;
+    uint8_t* temp = AllocatorAlloc(stride);
 
-        for (int x = 0; x < surface.width; x++) {
-            uint8_t* top = (uint8_t*)surface.pixels + (y * surface.width + x) * bpp;
-            uint8_t* bottom = (uint8_t*)surface.pixels + (yEnd * surface.width + x) * bpp;
+    const int half = height >> 1;
+    const int last = height - 1;
 
-            for (int b = 0; b < bpp; ++b) {
-                const uint8_t tmp = top[b];
-                top[b] = bottom[b];
-                bottom[b] = tmp;
-            }
-        }
+    for (int y = 0; y < half; ++y) {
+        const int yEnd = last - y;
+
+        uint8_t* top = (uint8_t*)surface.pixels + y * stride;
+        uint8_t* bottom = (uint8_t*)surface.pixels + yEnd * stride;
+
+        memcpy(temp, top, stride);
+        memcpy(top, bottom, stride);
+        memcpy(bottom, temp, stride);
     }
+
+    AllocatorFree(temp);
 }
 
 Surface TransformRotate(Surface src, float angle) {
