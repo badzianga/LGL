@@ -1,7 +1,9 @@
 #include "Image.h"
 #include "PixelFormat.h"
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image.h"
+#include "stb_image_write.h"
 
 Surface ImageLoad(const char* path) {
     int width, height, comp;
@@ -33,4 +35,18 @@ Surface ImageLoad(const char* path) {
     // TODO: on big-endian system it should probably be RGBA8888
     const PixelFormat* format = &FORMAT_ABGR8888;
     return (Surface){ width, height, data, width * format->bytesPerPixel, flags, format };
+}
+
+void ImageSave(Surface image, const char* path) {
+    if (!path || !image.pixels || !image.format) return;
+    const PixelFormat* pngFormat = &FORMAT_ABGR8888;
+    Surface output;
+    if (image.format != pngFormat) {
+        output = SurfaceConvert(image, pngFormat);
+    }
+    else {
+        output = image;
+    }
+    stbi_write_png(path, output.width, output.height, 4, output.pixels, output.stride);
+    SurfaceDestroy(&output);
 }
