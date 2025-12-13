@@ -207,88 +207,65 @@ Surface TransformScale(Surface src, int destWidth, int destHeight) {
     }
 }
 
-// TODO: avoid using sColorArray, write pixels to scaled surface in calculation iteration
-// TODO: separate calculating borders to avoid unnecessary checking for borders in every iteration
+// Note:
+// Src surface can be a clip of a bigger surface, thus (src.width * bpp != src.stride).
+// That's why B/D/E/F/H calculations can't be performed with array indexing.
+// However, dst surface is a new surface created by TransformScale, so (src.width * bpp == src.stride).
+// Thanks to this, is dstPixels array indexing can be used.
+#define MAKE_SCALE2X_FUNCTION(TYPE, BYTES)                                                             \
+static void Scale2x##BYTES(Surface src, Surface dst) {                                                 \
+    const int lastSrcRow = src.height - 1;                                                             \
+    const int lastSrcCol = src.width - 1;                                                              \
+    const int dw = dst.width;                                                                          \
+    TYPE* dstPixels = (TYPE*)dst.pixels;                                                               \
+                                                                                                       \
+    const int BSHIFT = BYTES >> 1;                                                                     \
+                                                                                                       \
+    for (int y = 0; y < src.height; ++y) {                                                             \
+        for (int x = 0; x < src.width; ++x) {                                                          \
+            const int upperY = y - 1 < 0 ? 0 : y - 1;                                                  \
+            const int lowerY = y + 1 >= src.height ? lastSrcRow : y + 1;                               \
+            const int leftX = x - 1 < 0 ? 0 : x - 1;                                                   \
+            const int rightX = x + 1 >= src.width ? lastSrcCol : x + 1;                                \
+                                                                                                       \
+            const TYPE B = *(TYPE*)((uint8_t*)src.pixels + upperY * src.stride + (     x << BSHIFT));  \
+            const TYPE D = *(TYPE*)((uint8_t*)src.pixels +      y * src.stride + ( leftX << BSHIFT));  \
+            const TYPE E = *(TYPE*)((uint8_t*)src.pixels +      y * src.stride + (     x << BSHIFT));  \
+            const TYPE F = *(TYPE*)((uint8_t*)src.pixels +      y * src.stride + (rightX << BSHIFT));  \
+            const TYPE H = *(TYPE*)((uint8_t*)src.pixels + lowerY * src.stride + (     x << BSHIFT));  \
+                                                                                                       \
+            TYPE E0, E1, E2, E3;                                                                       \
+            if (B != H && D != F) {                                                                    \
+                E0 = (D == B) ? D : E;                                                                 \
+                E1 = (B == F) ? F : E;                                                                 \
+                E2 = (D == H) ? D : E;                                                                 \
+                E3 = (H == F) ? F : E;                                                                 \
+            } else {                                                                                   \
+                E0 = E1 = E2 = E3 = E;                                                                 \
+            }                                                                                          \
+                                                                                                       \
+            const int dx = x << 1;                                                                     \
+            const int dy = y << 1;                                                                     \
+                                                                                                       \
+            dstPixels[dy * dw + dx] = E0;                                                              \
+            dstPixels[dy * dw + (dx + 1)] = E1;                                                        \
+            dstPixels[(dy + 1) * dw + dx] = E2;                                                        \
+            dstPixels[(dy + 1) * dw + (dx + 1)] = E3;                                                  \
+        }                                                                                              \
+    }                                                                                                  \
+}
+
+MAKE_SCALE2X_FUNCTION(uint8_t, 1)
+MAKE_SCALE2X_FUNCTION(uint16_t, 2)
+MAKE_SCALE2X_FUNCTION(uint32_t, 4)
+
 Surface TransformScale2x(Surface original) {
-    const PixelFormat* const fmt = original.format;
-    const int bpp = fmt->bytesPerPixel;
-
-    const Surface scaled = SurfaceCreate(original.width * 2, original.height * 2, fmt);
-
-    Color* oColorArray = AllocatorAlloc(sizeof(Color) * original.width * original.height);
-    Color* sColorArray = AllocatorAlloc(sizeof(Color) * scaled.width * scaled.height);
-
-    for (int i = 0; i < original.width * original.height; i++) {
-        const uint8_t* pixel = original.pixels + i * bpp;
-        switch (bpp) {
-            case 1: {
-                oColorArray[i] = PixelToColor(fmt, *pixel);
-            } break;
-            case 2: {
-                oColorArray[i] = PixelToColor(fmt, *(uint16_t*)pixel);
-            } break;
-            case 4: {
-                oColorArray[i] = PixelToColor(fmt, *(uint32_t*)pixel);
-            } break;
-            default: break;
-        }
+    const Surface scaled = SurfaceCreate(original.width << 1, original.height << 1, original.format);
+    switch (original.format->bytesPerPixel) {
+        case 1: Scale2x1(original, scaled); break;
+        case 2: Scale2x2(original, scaled); break;
+        case 4: Scale2x4(original, scaled); break;
+        default: break;
     }
-
-    for (int y = 0; y < original.height; y++) {
-        for (int x = 0; x < original.width; x++) {
-            const int upperY = y - 1 < 0 ? 0 : y - 1;
-            const int lowerY = y + 1 >= original.height ? original.height - 1 : y + 1;
-            const int leftX = x - 1 < 0 ? 0 : x - 1;
-            const int rightX = x + 1 >= original.width ? original.width - 1 : x + 1;
-
-            const Color B = oColorArray[upperY * original.width +      x];
-            const Color D = oColorArray[     y * original.width +  leftX];
-            const Color E = oColorArray[     y * original.width +      x];
-            const Color F = oColorArray[     y * original.width + rightX];
-            const Color H = oColorArray[lowerY * original.width +      x];
-
-            Color E0, E1, E2, E3;
-
-            #define EQ(color1, color2) (*(uint32_t*)&(color1) == *(uint32_t*)&(color2))
-
-            if (!EQ(B, H) && !EQ(D, F)) {
-                E0 = EQ(D, B) ? D : E;
-                E1 = EQ(B, F) ? F : E;
-                E2 = EQ(D, H) ? D : E;
-                E3 = EQ(H, F) ? F : E;
-            }
-            else {
-                E0 = E;
-                E1 = E;
-                E2 = E;
-                E3 = E;
-            }
-
-            sColorArray[((2 * y) + 0) * scaled.width + ((2 * x) + 0)] = E0;
-            sColorArray[((2 * y) + 0) * scaled.width + ((2 * x) + 1)] = E1;
-            sColorArray[((2 * y) + 1) * scaled.width + ((2 * x) + 0)] = E2;
-            sColorArray[((2 * y) + 1) * scaled.width + ((2 * x) + 1)] = E3;
-        }
-    }
-
-    for (int i = 0; i < scaled.width * scaled.height; i++) {
-        uint8_t* pixel = scaled.pixels + i * bpp;
-        switch (bpp) {
-            case 1: {
-                *pixel = ColorToPixel(fmt, sColorArray[i]);
-            } break;
-            case 2: {
-                *(uint16_t*)pixel = ColorToPixel(fmt, sColorArray[i]);
-            } break;
-            case 4: {
-                *(uint32_t*)pixel = ColorToPixel(fmt, sColorArray[i]);
-            } break;
-            default: break;
-        }
-    }
-
-    AllocatorFree(oColorArray);
-    AllocatorFree(sColorArray);
-
     return scaled;
 }
