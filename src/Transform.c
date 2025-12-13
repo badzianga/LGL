@@ -19,9 +19,9 @@ static void FlipX##BYTES(Surface surface) {                                   \
     }                                                                         \
 }
 
-MAKE_FLIP_X_FUNCTION(uint8_t, 1);
-MAKE_FLIP_X_FUNCTION(uint16_t, 2);
-MAKE_FLIP_X_FUNCTION(uint32_t, 4);
+MAKE_FLIP_X_FUNCTION(uint8_t, 1)
+MAKE_FLIP_X_FUNCTION(uint16_t, 2)
+MAKE_FLIP_X_FUNCTION(uint32_t, 4)
 
 void TransformFlipX(Surface surface) {
     switch (surface.format->bytesPerPixel) {

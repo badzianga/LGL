@@ -118,8 +118,8 @@ static void BlitSameFormat(Surface dest, Surface src, int x, int y) {
 
     int h = clipped.height;
     const int w = clipped.width * bpp;
-    uint8_t* dstRow = dest.pixels + clipped.y * dest.stride + clipped.x * bpp;
-    const uint8_t* srcRow = src.pixels + (clipped.y - y) * src.stride + (clipped.x - x) * bpp;
+    uint8_t* dstRow = (uint8_t*)dest.pixels + clipped.y * dest.stride + clipped.x * bpp;
+    const uint8_t* srcRow = (uint8_t*)src.pixels + (clipped.y - y) * src.stride + (clipped.x - x) * bpp;
     while (h--) {
         memcpy(dstRow, srcRow, w);
         dstRow += dest.stride;
