@@ -20,20 +20,24 @@ Surface ImageLoad(const char* path) {
         return (Surface){ 0 };
     }
 
-    // check data and set proper flags
+    // auto convert to display format (ARGB) and set proper flags
     SurfaceFlags flags = 0;
     for (int i = 0; i < width * height; i++) {
-        if (data[(i << 2) + 3] < 0xFF) {
+        uint8_t* pixelStart = data + (i << 2);
+
+        const uint8_t tmp = pixelStart[0];
+        pixelStart[0] = pixelStart[2];
+        pixelStart[2] = tmp;
+
+        if (pixelStart[3] < 0xFF) {
             flags |= SURFACE_FLAG_HAS_ALPHA;
-            if (data[(i << 2) + 3] > 0x00) {
+            if (pixelStart[3] > 0x00) {
                 flags |= SURFACE_FLAG_BLIT_BLENDED;
-                break;
             }
         }
     }
 
-    // TODO: on big-endian system it should probably be RGBA8888
-    const PixelFormat* format = &FORMAT_ABGR8888;
+    const PixelFormat* format = &FORMAT_ARGB8888;
     return (Surface){ width, height, data, width * format->bytesPerPixel, flags, format };
 }
 
