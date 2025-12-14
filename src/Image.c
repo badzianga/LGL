@@ -31,9 +31,6 @@ Surface ImageLoad(const char* path) {
 
         if (pixelStart[3] < 0xFF) {
             flags |= SURFACE_FLAG_HAS_ALPHA;
-            if (pixelStart[3] > 0x00) {
-                flags |= SURFACE_FLAG_BLIT_BLENDED;
-            }
         }
     }
 

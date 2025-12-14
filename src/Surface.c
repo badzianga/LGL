@@ -19,7 +19,12 @@ Surface SurfaceCreate(int width, int height, const PixelFormat* format) {
     }
     memset(pixels, 0, stride * height);
 
-    return (Surface){ width, height, pixels, stride, SURFACE_FLAG_NONE, format };
+    SurfaceFlags flags = SURFACE_FLAG_NONE;
+    if (format->aMask != 0) {
+        flags |= SURFACE_FLAG_HAS_ALPHA;
+    }
+
+    return (Surface){ width, height, pixels, stride, flags, format };
 }
 
 Surface SurfaceCreateFromBuffer(int width, int height, const PixelFormat* format, void* buffer) {
@@ -29,7 +34,21 @@ Surface SurfaceCreateFromBuffer(int width, int height, const PixelFormat* format
 
     const int stride = width * format->bytesPerPixel;
 
-    return (Surface){ width, height, buffer, stride, SURFACE_FLAG_NONE, format };
+    SurfaceFlags flags = SURFACE_FLAG_NONE;
+    if (format->aMask != 0) {
+        // analyze buffer to set proper flags
+        for (int i = 0; i < width * height; ++i) {
+            // for now, only 4-byte pixel format with alpha is suppoerted, so uint32_t can be safely used
+            const uint32_t pixel = ((uint32_t*)buffer)[i];
+            const Color pixelColor = PixelToColor(format, pixel);
+            if (pixelColor.a < 255) {
+                flags |= SURFACE_FLAG_HAS_ALPHA;
+                break;
+            }
+        }
+    }
+
+    return (Surface){ width, height, buffer, stride, flags, format };
 }
 
 void SurfaceDestroy(Surface* surface) {
@@ -38,7 +57,7 @@ void SurfaceDestroy(Surface* surface) {
 }
 
 Surface SurfaceCopy(Surface src) {
-    Surface copy = SurfaceCreate(src.width, src.height, src.format);
+    const Surface copy = SurfaceCreate(src.width, src.height, src.format);
     memcpy(copy.pixels, src.pixels, src.stride * src.height);
     return copy;
 }
@@ -52,49 +71,18 @@ Surface SurfaceConvert(Surface surface, const PixelFormat* format) {
         return SurfaceCopy(surface);
     }
 
-    Surface new = SurfaceCreate(surface.width, surface.height, format);
-
-    // TODO: use SurfaceBlit here
-
-    const uint8_t srcBpp = surface.format->bytesPerPixel;
-    const uint8_t dstBpp = new.format->bytesPerPixel;
-
-    for (int y = 0; y < surface.height; ++y) {
-        for (int x = 0; x < surface.width; ++x) {
-            const void* fromPtr = (uint8_t*)surface.pixels + y * surface.stride + x * srcBpp;
-            uint32_t fromPixel = 0;
-            switch (srcBpp) {
-                case 1: {
-                    fromPixel = *(uint8_t*)fromPtr;
-                } break;
-                case 2: {
-                    fromPixel = *(uint16_t*)fromPtr;
-                } break;
-                case 4: {
-                    fromPixel = *(uint32_t*)fromPtr;
-                } break;
-                default: break;
-            }
-
-            Color color = PixelToColor(surface.format, fromPixel);
-
-            const void* toPtr = (uint8_t*)new.pixels + y * new.stride + x * dstBpp;
-            const uint32_t toPixel = ColorToPixel(new.format, color);
-            switch (dstBpp) {
-                case 1: {
-                    *(uint8_t*)toPtr = (uint8_t)toPixel;
-                } break;
-                case 2: {
-                    *(uint16_t*)toPtr = (uint16_t)toPixel;
-                } break;
-                case 4: {
-                    *(uint32_t*)toPtr = toPixel;
-                } break;
-                default: break;
-            }
+    Surface converted = SurfaceCreate(surface.width, surface.height, format);
+    if (surface.format->aMask != 0 && converted.format->aMask == 0) {
+        // formats with bpp < 4 cannot have alpha channel, so alpha flags should be removed
+        if (converted.flags & SURFACE_FLAG_HAS_ALPHA) {
+            converted.flags &= ~SURFACE_FLAG_HAS_ALPHA;
         }
     }
-    return new;
+
+    // SurfaceBlit can convert formats on the fly, so it is used here to avoid code duplication
+    SurfaceBlit(converted, surface, 0, 0);
+
+    return converted;
 }
 
 void SurfaceFill(Surface surface, Color color) {
@@ -291,11 +279,8 @@ static void BlitDifferentFormatA(Surface dest, Surface src, int x, int y) {
 
 void SurfaceBlit(Surface dest, Surface src, int x, int y) {
     if (dest.format == src.format) {
-        if (src.flags & SURFACE_FLAG_BLIT_BLENDED) {
+        if (src.flags & SURFACE_FLAG_HAS_ALPHA) {
             BlitSameFormatA(dest, src, x, y);
-        }
-        else if (src.flags & SURFACE_FLAG_HAS_ALPHA) {
-            assert(0 && "TODO: not implemented");
         }
         else {
             BlitSameFormat(dest, src, x, y);
