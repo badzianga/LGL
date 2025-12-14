@@ -2,10 +2,15 @@
 #include "PixelFormat.h"
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "Error.h"
 #include "stb_image.h"
 #include "stb_image_write.h"
 
 Surface ImageLoad(const char* path) {
+    if (path == NULL) {
+        THROW_ERROR(ERR_INVALID_PARAMS);
+        return (Surface) {0};
+    }
     int width, height, comp;
 
     uint8_t* data = stbi_load(
@@ -17,6 +22,7 @@ Surface ImageLoad(const char* path) {
     );
 
     if (data == NULL) {
+        THROW_ERROR(ERR_FILE_NOT_FOUND);
         return (Surface){ 0 };
     }
 
@@ -39,7 +45,10 @@ Surface ImageLoad(const char* path) {
 }
 
 void ImageSave(Surface image, const char* path) {
-    if (!path || !image.pixels || !image.format) return;
+    if (!path || !image.pixels || !image.format) {
+        THROW_ERROR(ERR_INVALID_PARAMS);
+        return;
+    }
     const PixelFormat* pngFormat = &FORMAT_ABGR8888;
     Surface output;
     if (image.format != pngFormat) {

@@ -156,8 +156,6 @@ const PixelFormat FORMAT_BGR233 = {
 };
 
 uint32_t ColorToPixel(const PixelFormat* format, Color color) {
-    if (format == NULL) return 0;
-
     const uint32_t r = (color.r >> format->rLoss) << format->rShift;
     const uint32_t g = (color.g >> format->gLoss) << format->gShift;
     const uint32_t b = (color.b >> format->bLoss) << format->bShift;
@@ -167,8 +165,6 @@ uint32_t ColorToPixel(const PixelFormat* format, Color color) {
 }
 
 Color PixelToColor(const PixelFormat* format, uint32_t pixel) {
-    if (format == NULL) return (Color){ 0 };
-
     Color color;
     color.r = ((pixel & format->rMask) >> format->rShift) << format->rLoss;
     color.g = ((pixel & format->gMask) >> format->gShift) << format->gLoss;

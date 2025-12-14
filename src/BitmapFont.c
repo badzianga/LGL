@@ -1,4 +1,5 @@
 #include "BitmapFont.h"
+#include "Error.h"
 #include "internal/Inlines.h"
 #include "PixelFormat.h"
 
@@ -334,7 +335,7 @@ static void BlendText(Surface surface, int x, int y, const char* text, const Bit
 }
 
 void DrawTextBitmapFont(Surface surface, int x, int y, const char* text, const BitmapFont* font, Color color) {
-    if (!surface.pixels || !surface.format || !text || !font || color.a == 0) return;
+    if (text == NULL || color.a == 0) return;
 
     if (color.a == 255) {
         FillText(surface, x, y, text, font, ColorToPixel(surface.format, color));
@@ -346,8 +347,7 @@ void DrawTextBitmapFont(Surface surface, int x, int y, const char* text, const B
 
 void MeasureBitmapFontText(const char* text, const BitmapFont* font, int* outWidth, int* outHeight) {
     if (!text || !font || !font->data) {
-        if (outWidth) *outWidth = 0;
-        if (outHeight) *outHeight = 0;
+        THROW_ERROR(ERR_INVALID_PARAMS);
         return;
     }
 

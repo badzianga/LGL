@@ -3,6 +3,7 @@
 #include FT_FREETYPE_H
 
 #include "Font.h"
+#include "Error.h"
 #include "internal/Inlines.h"
 
 static FT_Library ftLibrary = NULL;
@@ -17,21 +18,28 @@ static int EnsureFtLibrary() {
 }
 
 Font FontLoad(const char* path, int pixelSize) {
-    if (!path || pixelSize <= 0 || EnsureFtLibrary() != 0) return (Font){ 0 };
+    if (!path || pixelSize <= 0 || EnsureFtLibrary() != 0) {
+        if (EnsureFtLibrary() != 0) THROW_ERROR(ERR_INTERNAL_ERROR);
+        else THROW_ERROR(ERR_INVALID_PARAMS);
+        return (Font){ 0 };
+    }
 
     FT_Face face;
     if (FT_New_Face(ftLibrary, path, 0, &face) != 0) {
+        THROW_ERROR(ERR_INTERNAL_ERROR);
         return (Font){ 0 };
     }
 
     if (FT_Set_Pixel_Sizes(face, 0, pixelSize) != 0) {
         FT_Done_Face(face);
+        THROW_ERROR(ERR_INTERNAL_ERROR);
         return (Font){ 0 };
     }
 
     hb_font_t* hbFont = hb_ft_font_create(face, NULL);
     if (!hbFont) {
         FT_Done_Face(face);
+        THROW_ERROR(ERR_INTERNAL_ERROR);
         return (Font){ 0 };
     }
 
@@ -52,12 +60,10 @@ void FontFree(Font* font) {
 }
 
 static inline int ComputeBaselineFromTop(FT_Face face, int topY) {
-    return topY + (face->size != 0 ? (int)(face->size->metrics.ascender >> 6) : 0);
+    return topY + (face->size != NULL ? (int)(face->size->metrics.ascender >> 6) : 0);
 }
 
 static void BlitGlyphToSurface(Surface surface, const FT_Bitmap* bitmap, int dstX, int dstY, Color color) {
-    if (bitmap == NULL || bitmap->buffer == NULL) return;
-
     const int bpp = surface.format->bytesPerPixel;
 
     const int bmW = (int)bitmap->width;
@@ -131,7 +137,7 @@ void DrawFontChar(Surface surface, int x, int y, char c, const Font* font, Color
 }
 
 void DrawFontText(Surface surface, int x, int y, const char* text, const Font* font, Color color) {
-    if (surface.pixels == NULL || font == NULL || font->internal == NULL) return;
+    if (text == NULL || color.a == 0) return;
     FT_Face face = font->internal;
     hb_font_t* hbFont = font->hbFont;
 
@@ -199,8 +205,7 @@ void DrawFontText(Surface surface, int x, int y, const char* text, const Font* f
 
 void MeasureFontText(const char* text, const Font* font, int* outWidth, int* outHeight) {
     if (!text || !font || !font->internal || !font->hbFont) {
-        if (outWidth) *outWidth = 0;
-        if (outHeight) *outHeight = 0;
+        THROW_ERROR(ERR_INVALID_PARAMS);
         return;
     }
 

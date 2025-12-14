@@ -3,18 +3,21 @@
 
 #include "Allocator.h"
 #include "Color.h"
+#include "Error.h"
 #include "FillRect.h"
 #include "PixelFormat.h"
 #include "Surface.h"
 
 Surface SurfaceCreate(int width, int height, const PixelFormat* format) {
     if (width <= 0 || height <= 0 || format == NULL) {
+        THROW_ERROR(ERR_INVALID_PARAMS);
         return (Surface){ 0 };
     }
 
     const int stride = width * format->bytesPerPixel;
     void* pixels = AllocatorAlloc(stride * height);
     if (pixels == NULL) {
+        THROW_ERROR(ERR_OUT_OF_MEMORY);
         return (Surface){ 0 };
     }
     memset(pixels, 0, stride * height);
@@ -29,6 +32,7 @@ Surface SurfaceCreate(int width, int height, const PixelFormat* format) {
 
 Surface SurfaceCreateFromBuffer(int width, int height, const PixelFormat* format, void* buffer) {
     if (width <= 0 || height <= 0 || format == NULL || buffer == NULL) {
+        THROW_ERROR(ERR_INVALID_PARAMS);
         return (Surface){ 0 };
     }
 
@@ -52,18 +56,24 @@ Surface SurfaceCreateFromBuffer(int width, int height, const PixelFormat* format
 }
 
 void SurfaceDestroy(Surface* surface) {
+    if (surface == NULL) return;
     AllocatorFree(surface->pixels);
     *surface = (Surface){ 0 };
 }
 
 Surface SurfaceCopy(Surface src) {
+    if (src.pixels == NULL || src.format == NULL) {
+        THROW_ERROR(ERR_INVALID_PARAMS);
+        return (Surface){ 0 };
+    }
     const Surface copy = SurfaceCreate(src.width, src.height, src.format);
     memcpy(copy.pixels, src.pixels, src.stride * src.height);
     return copy;
 }
 
 Surface SurfaceConvert(Surface surface, const PixelFormat* format) {
-    if (surface.format == NULL || format == NULL) {
+    if (surface.pixels == NULL || surface.format == NULL || format == NULL) {
+        THROW_ERROR(ERR_INVALID_PARAMS);
         return (Surface){ 0 };
     }
 
