@@ -18,7 +18,7 @@ inline static Color BlendColors(Color src, Color dst, uint8_t a, uint8_t invA) {
     dst.r = (src.r * a + dst.r * invA) / 255;
     dst.g = (src.g * a + dst.g * invA) / 255;
     dst.b = (src.b * a + dst.b * invA) / 255;
-    dst.a = 255;
+    dst.a = src.a + (dst.a * invA) / 255;
     return dst;
 }
 
