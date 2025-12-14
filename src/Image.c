@@ -48,5 +48,7 @@ void ImageSave(Surface image, const char* path) {
         output = image;
     }
     stbi_write_png(path, output.width, output.height, 4, output.pixels, output.stride);
-    SurfaceDestroy(&output);
+    if (image.format != pngFormat) {
+        SurfaceDestroy(&output);
+    }
 }
