@@ -9,8 +9,9 @@ extern "C" {
 
 typedef enum SurfaceFlags {
     SURFACE_FLAG_NONE          = 0,
-    SURFACE_FLAG_HAS_ALPHA     = (1 << 0),  // any pixel has alpha < 255, so surface should be blended
-    SURFACE_FLAG_HAS_COLOR_KEY = (1 << 1),
+    SURFACE_FLAG_PREALLOCATED  = (1 << 0),
+    SURFACE_FLAG_HAS_ALPHA     = (1 << 1),  // any pixel has alpha < 255, so surface should be blended
+    SURFACE_FLAG_HAS_COLOR_KEY = (1 << 2),
 } SurfaceFlags;
 
 typedef struct Surface {

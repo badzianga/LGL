@@ -38,7 +38,7 @@ Surface SurfaceCreateFromBuffer(int width, int height, const PixelFormat* format
 
     const int stride = width * format->bytesPerPixel;
 
-    SurfaceFlags flags = SURFACE_FLAG_NONE;
+    SurfaceFlags flags = SURFACE_FLAG_PREALLOCATED;
     if (format->aMask != 0) {
         // analyze buffer to set proper flags
         for (int i = 0; i < width * height; ++i) {
@@ -56,7 +56,7 @@ Surface SurfaceCreateFromBuffer(int width, int height, const PixelFormat* format
 }
 
 void SurfaceDestroy(Surface* surface) {
-    if (surface == NULL) return;
+    if (surface == NULL || (surface->flags & SURFACE_FLAG_PREALLOCATED)) return;
     AllocatorFree(surface->pixels);
     *surface = (Surface){ 0 };
 }
@@ -66,8 +66,9 @@ Surface SurfaceCopy(Surface src) {
         THROW_ERROR(ERR_INVALID_PARAMS);
         return (Surface){ 0 };
     }
-    const Surface copy = SurfaceCreate(src.width, src.height, src.format);
+    Surface copy = SurfaceCreate(src.width, src.height, src.format);
     memcpy(copy.pixels, src.pixels, src.stride * src.height);
+    copy.flags &= ~SURFACE_FLAG_PREALLOCATED;
     return copy;
 }
 
@@ -78,7 +79,9 @@ Surface SurfaceConvert(Surface surface, const PixelFormat* format) {
     }
 
     if (surface.format == format) {
-        return SurfaceCopy(surface);
+        Surface copy = SurfaceCopy(surface);
+        copy.flags &= ~SURFACE_FLAG_PREALLOCATED;
+        return copy;
     }
 
     Surface converted = SurfaceCreate(surface.width, surface.height, format);
@@ -88,6 +91,7 @@ Surface SurfaceConvert(Surface surface, const PixelFormat* format) {
             converted.flags &= ~SURFACE_FLAG_HAS_ALPHA;
         }
     }
+    converted.flags &= ~SURFACE_FLAG_PREALLOCATED;
 
     // SurfaceBlit can convert formats on the fly, so it is used here to avoid code duplication
     SurfaceBlit(converted, surface, 0, 0);
