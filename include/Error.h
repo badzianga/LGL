@@ -11,6 +11,7 @@ typedef enum ErrCode {
     ERR_OUT_OF_MEMORY  = 2,
     ERR_FILE_NOT_FOUND = 3,
     ERR_INTERNAL_ERROR = 4,
+    ERR_UNKNOWN_FORMAT = 5,
 } ErrCode;
 
 void ThrowError(ErrCode code, const char* file, int line);
