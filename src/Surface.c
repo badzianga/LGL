@@ -305,3 +305,32 @@ void SurfaceBlit(Surface dest, Surface src, int x, int y) {
         }
     }
 }
+
+void SurfaceSetColorKey(Surface* surface, Color color) {
+    const uint8_t r = color.r;
+    const uint8_t g = color.g;
+    const uint8_t b = color.b;
+
+    surface->flags &= 0x000000FF;  // clear color key components
+    surface->flags |= SURFACE_FLAG_HAS_COLOR_KEY;
+    surface->flags |= SURFACE_FLAG_HAS_ALPHA;
+
+    surface->flags |= r << 24;
+    surface->flags |= g << 16;
+    surface->flags |= b << 8;
+}
+
+Color SurfaceGetColorKey(Surface surface) {
+    if (!(surface.flags & SURFACE_FLAG_HAS_COLOR_KEY)) return (Color){ 0 };
+    return (Color){
+        .r = (surface.flags & 0xFF000000) >> 24,
+        .g = (surface.flags & 0x00FF0000) >> 16,
+        .b = (surface.flags & 0x0000FF00) >> 8,
+        .a = 0
+    };
+}
+
+void SurfaceUnsetColorKey(Surface* surface) {
+    surface->flags &= 0x000000FF;
+    surface->flags &= ~SURFACE_FLAG_HAS_COLOR_KEY;
+}

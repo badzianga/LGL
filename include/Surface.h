@@ -8,8 +8,9 @@ extern "C" {
 #endif  // __cplusplus
 
 typedef enum SurfaceFlags {
-    SURFACE_FLAG_NONE         = 0,
-    SURFACE_FLAG_HAS_ALPHA    = (1 << 0),  // any pixel has alpha < 255, so surface should be blended
+    SURFACE_FLAG_NONE          = 0,
+    SURFACE_FLAG_HAS_ALPHA     = (1 << 0),  // any pixel has alpha < 255, so surface should be blended
+    SURFACE_FLAG_HAS_COLOR_KEY = (1 << 1),
 } SurfaceFlags;
 
 typedef struct Surface {
@@ -28,6 +29,9 @@ Surface SurfaceCopy(Surface src);
 Surface SurfaceConvert(Surface surface, const PixelFormat* format);
 void SurfaceFill(Surface surface, Color color);
 void SurfaceBlit(Surface dest, Surface src, int x, int y);
+void SurfaceSetColorKey(Surface* surface, Color color);
+Color SurfaceGetColorKey(Surface surface);
+void SurfaceUnsetColorKey(Surface* surface);
 
 #ifdef __cplusplus
 }
