@@ -76,14 +76,7 @@ static Surface LoadRGB(FILE* f, const BitmapInfo* info, const BitmapHeader* head
             const uint8_t b = srcRow[thisX + 0];
             const uint8_t g = srcRow[thisX + 1];
             const uint8_t r = srcRow[thisX + 2];
-            uint8_t a = 255;
-
-            if (srcBpp == 4) {
-                a = srcRow[thisX + 3];
-                if (a < 255) {
-                    surface.flags |= SURFACE_FLAG_HAS_ALPHA;
-                }
-            }
+            const uint8_t a = 255;
 
             dst[(x << 2) + 0] = b;
             dst[(x << 2) + 1] = g;
