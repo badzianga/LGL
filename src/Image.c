@@ -85,7 +85,7 @@ static Surface LoadRGB(FILE* f, const BitmapInfo* info, const BitmapHeader* head
         }
     }
 
-    free(srcRow);
+    AllocatorFree(srcRow);
     fclose(f);
 
     return surface;
@@ -128,7 +128,7 @@ static Surface LoadBitfields(FILE* f, const BitmapInfo* info, const BitmapHeader
     fseek(f, header->offset, SEEK_SET);
 
     const int srcBpp = info->bitCount >> 3;
-    const int srcStride = ((width * srcBpp + 3) & ~3);
+    const int srcStride = ((width * srcBpp + 3) & ~3);  // align to 4 bytes
     const int bottomUp = (info->height > 0);
     const int lastRow = height - 1;
     const bool shouldAddAlpha = info->bitCount >= 24 && !aMask;
@@ -168,7 +168,7 @@ static Surface LoadBitfields(FILE* f, const BitmapInfo* info, const BitmapHeader
         }
     }
 
-    free(srcRow);
+    AllocatorFree(srcRow);
     fclose(f);
 
     return surface;
