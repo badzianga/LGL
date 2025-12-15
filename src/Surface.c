@@ -4,6 +4,7 @@
 #include "Color.h"
 #include "Error.h"
 #include "FillRect.h"
+#include "internal/Inlines.h"
 #include "PixelFormat.h"
 #include "Surface.h"
 
@@ -128,58 +129,43 @@ static void BlitSameFormat(Surface dest, Surface src, int x, int y) {
     }
 }
 
+// for now, LGL supports only 4-byte colors with alpha channel
 static void BlitSameFormatA(Surface dest, Surface src, int x, int y) {
-    const int bpp = src.format->bytesPerPixel;
+    const PixelFormat* fmt = dest.format;
 
-    for (int sy = 0; sy < src.height; ++sy) {
-        const int dy = y + sy;
-        if (dy < 0 || dy >= dest.height) continue;
-        for (int sx = 0; sx < src.width; ++sx) {
-            const int dx = x + sx;
-            if (dx < 0 || dx >= dest.width) continue;
-            uint32_t srcPixel = 0;
-            Color dstColor = { 0 };
-            switch (bpp) {
-                case 1: {
-                    srcPixel = *((uint8_t*)src.pixels + (sy * src.width + sx));
-                    dstColor = PixelToColor(src.format, *((uint8_t*)dest.pixels + (dy * dest.width + dx)));
-                } break;
-                case 2: {
-                    srcPixel = *((uint16_t*)src.pixels + (sy * src.width + sx));
-                    dstColor = PixelToColor(src.format, *((uint16_t*)dest.pixels + (dy * dest.width + dx)));
-                } break;
-                case 4: {
-                    srcPixel = *((uint32_t*)src.pixels + (sy * src.width + sx));
-                    dstColor = PixelToColor(src.format, *((uint32_t*)dest.pixels + (dy * dest.width + dx)));
-                } break;
-                default: break;
+    const Rect destRect = { 0, 0, dest.width, dest.height };
+    const Rect srcRect = { x, y, src.width, src.height };
+    Rect clipped;
+    if (!RectIntersection(&srcRect, &destRect, &clipped)) return;
+
+    const int h = clipped.height;
+    const int w = clipped.width;
+
+    uint8_t* dstRow8 = (uint8_t*)dest.pixels + clipped.y * dest.stride + (clipped.x << 2);
+    uint8_t* srcRow8 = (uint8_t*)src.pixels + (clipped.y - y) * src.stride + ((clipped.x - x) << 2);
+
+    for (int iy = 0; iy < h; ++iy) {
+        uint32_t* dstRow = (uint32_t*)dstRow8;
+        const uint32_t* srcRow = (uint32_t*)srcRow8;
+
+        for (int ix = 0; ix < w; ++ix) {
+            const uint32_t srcValue = srcRow[ix];
+            const Color srcColor = PixelToColor(fmt, srcValue);
+            if (srcColor.a == 0) {
+                continue;
             }
-            const Color srcColor = PixelToColor(src.format, srcPixel);
-            if (srcColor.a == 0) continue;
-
-            const uint8_t a = srcColor.a;
-            uint32_t outColor = 0;
-            if (a != 255) {
-                const uint8_t invA = 255 - a;
-
-                const Color out = {
-                    .r = (srcColor.r * a + dstColor.r * invA) / 255,
-                    .g = (srcColor.g * a + dstColor.g * invA) / 255,
-                    .b = (srcColor.b * a + dstColor.b * invA) / 255,
-                    .a = (srcColor.a + dstColor.a * (255 - srcColor.a) / 255)
-                };
-                outColor = ColorToPixel(src.format, out);
+            if (srcColor.a == 255) {
+                dstRow[ix] = srcValue;
             }
             else {
-                outColor = ColorToPixel(src.format, srcColor);
-            }
-
-            uint8_t* destPixel = (uint8_t*)dest.pixels + dy * dest.stride + dx * bpp;
-
-            for (int b = 0; b < bpp; ++b) {
-                destPixel[b] = ((uint8_t*)&outColor)[b];
+                const uint32_t dstValue = dstRow[ix];
+                Color dstColor = PixelToColor(fmt, dstValue);
+                dstColor = BlendColors(srcColor, dstColor, srcColor.a, 255 - srcColor.a);
+                dstRow[ix] = ColorToPixel(fmt, dstColor);
             }
         }
+        dstRow8 += dest.stride;
+        srcRow8 += src.stride;
     }
 }
 
