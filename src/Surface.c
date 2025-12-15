@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <string.h>
 
 #include "Allocator.h"
@@ -167,8 +166,7 @@ static void BlitSameFormatA(Surface dest, Surface src, int x, int y) {
                     .r = (srcColor.r * a + dstColor.r * invA) / 255,
                     .g = (srcColor.g * a + dstColor.g * invA) / 255,
                     .b = (srcColor.b * a + dstColor.b * invA) / 255,
-                    .a = 255
-                    // .a = (srcColor.a + dstColor.a * (255 - srcColor.a) / 255)
+                    .a = (srcColor.a + dstColor.a * (255 - srcColor.a) / 255)
                 };
                 outColor = ColorToPixel(src.format, out);
             }
@@ -273,8 +271,7 @@ static void BlitDifferentFormatA(Surface dest, Surface src, int x, int y) {
                     .r = (srcColor.r * a + destColor.r * invA) / 255,
                     .g = (srcColor.g * a + destColor.g * invA) / 255,
                     .b = (srcColor.b * a + destColor.b * invA) / 255,
-                    .a = 255
-                    // .a = (srcColor.a + destColor.a * (255 - srcColor.a) / 255)
+                    .a = (srcColor.a + destColor.a * (255 - srcColor.a) / 255)
                 };
                 outColor = ColorToPixel(dest.format, out);
             }
@@ -293,20 +290,16 @@ static void BlitDifferentFormatA(Surface dest, Surface src, int x, int y) {
 
 void SurfaceBlit(Surface dest, Surface src, int x, int y) {
     if (dest.format == src.format) {
-        if (src.flags & SURFACE_FLAG_HAS_ALPHA) {
+        if (src.flags & SURFACE_FLAG_HAS_ALPHA)
             BlitSameFormatA(dest, src, x, y);
-        }
-        else {
+        else
             BlitSameFormat(dest, src, x, y);
-        }
     }
     else {
-        if (src.format->aMask != 0) {
+        if (src.format->aMask != 0)
             BlitDifferentFormatA(dest, src, x, y);
-        }
-        else {
+        else
             BlitDifferentFormat(dest, src, x, y);
-        }
     }
 }
 
@@ -315,7 +308,7 @@ void SurfaceSetColorKey(Surface* surface, Color color) {
     const uint8_t g = color.g;
     const uint8_t b = color.b;
 
-    surface->flags &= 0x000000FF;  // clear color key components
+    surface->flags &= 0x000000FF;  // clear color key components, but leave flags
     surface->flags |= SURFACE_FLAG_HAS_COLOR_KEY;
     surface->flags |= SURFACE_FLAG_HAS_ALPHA;
 
