@@ -25,5 +25,5 @@ add_library(LGL STATIC
 )
 target_link_libraries(LGL PRIVATE ${PLATFORM_LIBS} Freetype::Freetype harfbuzz)
 target_include_directories(LGL PRIVATE
-        include external
+        include
 )

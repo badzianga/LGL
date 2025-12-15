@@ -7,8 +7,8 @@
 extern "C" {
 #endif  // __cplusplus
 
-Surface ImageLoad(const char* path);
-void ImageSave(Surface image, const char* path);
+Surface ImageLoadBMP(const char* path);
+void ImageSaveBMP(Surface image, const char* path);
 
 #ifdef __cplusplus
 }

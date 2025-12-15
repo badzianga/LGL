@@ -173,3 +173,35 @@ Color PixelToColor(const PixelFormat* format, uint32_t pixel) {
 
     return color;
 }
+
+static const PixelFormat* formats[] = {
+    &FORMAT_RGBA8888,
+    &FORMAT_ABGR8888,
+    &FORMAT_ARGB8888,
+    &FORMAT_BGRA8888,
+    &FORMAT_RGB565,
+    &FORMAT_BGR565,
+    &FORMAT_RGB332,
+    &FORMAT_BGR233,
+};
+static const int numFormats = sizeof(formats) / sizeof(formats[0]);
+
+const PixelFormat* FindPixelFormatByMasks(uint32_t rMask, uint32_t gMask, uint32_t bMask, uint32_t aMask) {
+    for (int i = 0; i < numFormats; ++i) {
+        const PixelFormat* format = formats[i];
+        if (format->rMask == rMask && format->gMask == gMask && format->bMask == bMask && format->aMask == aMask) {
+            return format;
+        }
+    }
+    return NULL;
+}
+
+const PixelFormat* FindPixelFormatByMasksExcludingAlpha(uint32_t rMask, uint32_t gMask, uint32_t bMask) {
+    for (int i = 0; i < numFormats; ++i) {
+        const PixelFormat* format = formats[i];
+        if (format->rMask == rMask && format->gMask == gMask && format->bMask == bMask) {
+            return format;
+        }
+    }
+    return NULL;
+}

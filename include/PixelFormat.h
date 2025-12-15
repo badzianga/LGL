@@ -39,6 +39,8 @@ extern const PixelFormat FORMAT_BGR233;
 
 uint32_t ColorToPixel(const PixelFormat* format, Color color);
 Color PixelToColor(const PixelFormat* format, uint32_t pixel);
+const PixelFormat* FindPixelFormatByMasks(uint32_t rMask, uint32_t gMask, uint32_t bMask, uint32_t aMask);
+const PixelFormat* FindPixelFormatByMasksExcludingAlpha(uint32_t rMask, uint32_t gMask, uint32_t bMask);
 
 #ifdef __cplusplus
 }
