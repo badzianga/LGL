@@ -521,17 +521,60 @@ void SurfaceBlit(Surface dest, Surface src, int x, int y) {
 }
 
 void SurfaceSetColorKey(Surface* surface, Color color) {
-    const uint8_t r = color.r;
-    const uint8_t g = color.g;
-    const uint8_t b = color.b;
-
     surface->flags &= 0x000000FF;  // clear color key components, but leave flags
     surface->flags |= SURFACE_FLAG_HAS_COLOR_KEY;
-    surface->flags |= SURFACE_FLAG_HAS_ALPHA;
 
-    surface->flags |= r << 24;
-    surface->flags |= g << 16;
-    surface->flags |= b << 8;
+    surface->flags |= color.r << 24;
+    surface->flags |= color.g << 16;
+    surface->flags |= color.b << 8;
+
+    if (surface->flags & SURFACE_FLAG_HAS_ALPHA) {
+        // assert that none of the pixels has alpha channel by doing premultiply blend when alpha != 255
+        const PixelFormat* fmt = surface->format;
+
+        const uint32_t rMask = fmt->rMask;
+        const uint32_t gMask = fmt->gMask;
+        const uint32_t bMask = fmt->bMask;
+        const uint32_t aMask = fmt->aMask;
+
+        const uint8_t rShift = fmt->rShift;
+        const uint8_t gShift = fmt->gShift;
+        const uint8_t bShift = fmt->bShift;
+        const uint8_t aShift = fmt->aShift;
+
+        uint8_t* row = (uint8_t*)surface->pixels;
+
+        for (int y = 0; y < surface->height; ++y) {
+            uint32_t* pixel = (uint32_t*)row;
+
+            for (int x = 0; x < surface->width; ++x) {
+                uint32_t p = pixel[x];
+
+                const uint32_t a = (p & aMask) >> aShift;
+
+                if (a != 255) {
+                    uint32_t r = (p & rMask) >> rShift;
+                    uint32_t g = (p & gMask) >> gShift;
+                    uint32_t b = (p & bMask) >> bShift;
+
+                    r = (r * a) / 255;
+                    g = (g * a) / 255;
+                    b = (b * a) / 255;
+
+                    p = ((r << rShift) & rMask) |
+                        ((g << gShift) & gMask) |
+                        ((b << bShift) & bMask) |
+                        ((255u << aShift) & aMask);
+
+                    pixel[x] = p;
+                }
+            }
+
+            row += surface->stride;
+        }
+    }
+
+    surface->flags &= ~SURFACE_FLAG_HAS_ALPHA;
 }
 
 Color SurfaceGetColorKey(Surface surface) {
