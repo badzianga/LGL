@@ -312,39 +312,59 @@ static void BlitSameFormatA(Surface dest, Surface src, int x, int y) {
 #endif // __SSE2__
 
 static void BlitDifferentFormat(Surface dest, Surface src, int x, int y) {
-    const int srcBpp = src.format->bytesPerPixel;
+    #define LOAD_PIXEL(ptr, bpp)     \
+    ((bpp) == 1 ? *(uint8_t*)(ptr) : \
+    (bpp) == 2 ? *(uint16_t*)(ptr) : \
+    *(uint32_t*)(ptr))
+
+    #define STORE_PIXEL(ptr, bpp, value)                              \
+        do {                                                          \
+            switch (bpp) {                                            \
+                case 1: *(uint8_t*)(ptr)  = (uint8_t)(value); break;  \
+                case 2: *(uint16_t*)(ptr) = (uint16_t)(value); break; \
+                case 4: *(uint32_t*)(ptr) = (uint32_t)(value); break; \
+                default: break;                                       \
+            }                                                         \
+        } while (0)
+
+    const int srcBpp  = src.format->bytesPerPixel;
     const int destBpp = dest.format->bytesPerPixel;
 
-    for (int sy = 0; sy < src.height; ++sy) {
-        const int dy = y + sy;
-        if (dy < 0 || dy >= dest.height) continue;
-        for (int sx = 0; sx < src.width; ++sx) {
-            const int dx = x + sx;
-            if (dx < 0 || dx >= dest.width) continue;
+    const Rect destRect = { 0, 0, dest.width, dest.height };
+    const Rect srcRect  = { x, y, src.width, src.height };
+    Rect clipped;
 
-            const uint8_t* srcPixel = (uint8_t*)src.pixels + sy * src.stride + sx * srcBpp;
-            uint32_t srcPixelValue = 0;
-            switch (srcBpp) {
-                case 1: {
-                    srcPixelValue = *srcPixel;
-                } break;
-                case 2: {
-                    srcPixelValue = *(uint16_t*)srcPixel;
-                } break;
-                case 4: {
-                    srcPixelValue = *(uint32_t*)srcPixel;
-                } break;
-                default: break;
-            }
-            const uint32_t newValue = ColorToPixel(dest.format, PixelToColor(src.format, srcPixelValue));
+    if (!RectIntersection(&srcRect, &destRect, &clipped)) return;
 
-            uint8_t* destPixel = (uint8_t*)dest.pixels + dy * dest.stride + dx * destBpp;
+    const int w = clipped.width;
+    const int h = clipped.height;
 
-            for (int b = 0; b < destBpp; ++b) {
-                destPixel[b] = ((uint8_t*)&newValue)[b];
-            }
+    const uint8_t* srcRow = (const uint8_t*)src.pixels + (clipped.y - y) * src.stride + (clipped.x - x) * srcBpp;
+
+    uint8_t* destRow = (uint8_t*)dest.pixels + clipped.y * dest.stride + clipped.x * destBpp;
+
+    for (int iy = 0; iy < h; ++iy) {
+        const uint8_t* srcPixel  = srcRow;
+        uint8_t* destPixel = destRow;
+
+        for (int ix = 0; ix < w; ++ix) {
+            const uint32_t srcValue = LOAD_PIXEL(srcPixel, srcBpp);
+
+            const Color c = PixelToColor(src.format, srcValue);
+            const uint32_t dstValue = ColorToPixel(dest.format, c);
+
+            STORE_PIXEL(destPixel, destBpp, dstValue);
+
+            srcPixel += srcBpp;
+            destPixel += destBpp;
         }
+
+        srcRow  += src.stride;
+        destRow += dest.stride;
     }
+
+    #undef LOAD_PIXEL
+    #undef STORE_PIXEL
 }
 
 static void BlitDifferentFormatA(Surface dest, Surface src, int x, int y) {
@@ -428,7 +448,7 @@ void SurfaceBlit(Surface dest, Surface src, int x, int y) {
             BlitSameFormat(dest, src, x, y);
     }
     else {
-        if (src.format->aMask != 0)
+        if (src.flags & SURFACE_FLAG_HAS_ALPHA)
             BlitDifferentFormatA(dest, src, x, y);
         else
             BlitDifferentFormat(dest, src, x, y);
