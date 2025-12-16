@@ -96,7 +96,7 @@ Surface SurfaceCopy(Surface src) {
     }
     Surface copy = SurfaceCreate(src.width, src.height, src.format);
     memcpy(copy.pixels, src.pixels, src.stride * src.height);
-    copy.flags &= ~SURFACE_FLAG_PREALLOCATED;
+    copy.flags = src.flags & ~SURFACE_FLAG_PREALLOCATED;
     return copy;
 }
 
@@ -110,7 +110,6 @@ Surface SurfaceConvert(Surface surface, const PixelFormat* format) {
 
     if (surface.format == format) {
         Surface copy = SurfaceCopy(surface);
-        copy.flags &= ~SURFACE_FLAG_PREALLOCATED;
         return copy;
     }
 
