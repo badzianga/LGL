@@ -22,6 +22,34 @@ inline static Color BlendColors(Color src, Color dst, uint8_t a, uint8_t invA) {
     return dst;
 }
 
+static inline uint32_t ConvertPixel(uint32_t pixel, const PixelFormat* srcFmt, const PixelFormat* dstFmt) {
+    uint32_t r = 0, g = 0, b = 0, a = 0;
+
+    r = (pixel & srcFmt->rMask) >> srcFmt->rShift;
+    g = (pixel & srcFmt->gMask) >> srcFmt->gShift;
+    b = (pixel & srcFmt->bMask) >> srcFmt->bShift;
+    a = (pixel & srcFmt->aMask) >> srcFmt->aShift;
+
+    r <<= srcFmt->rLoss;
+    g <<= srcFmt->gLoss;
+    b <<= srcFmt->bLoss;
+    a <<= srcFmt->aLoss;
+
+    r >>= dstFmt->rLoss;
+    g >>= dstFmt->gLoss;
+    b >>= dstFmt->bLoss;
+    a >>= dstFmt->aLoss;
+
+    uint32_t out = 0;
+
+    out |= (r << dstFmt->rShift) & dstFmt->rMask;
+    out |= (g << dstFmt->gShift) & dstFmt->gMask;
+    out |= (b << dstFmt->bShift) & dstFmt->bMask;
+    out |= (a << dstFmt->aShift) & dstFmt->aMask;
+
+    return out;
+}
+
 #ifdef __cplusplus
 }
 #endif  // __cplusplus

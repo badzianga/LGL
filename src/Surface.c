@@ -415,14 +415,10 @@ static void BlitDifferentFormatA(Surface dest, Surface src, int x, int y) {
     }
 }
 
-static inline int ColorEqualRGB(Color a, Color b) {
-    return (a.r == b.r) && (a.g == b.g) && (a.b == b.b);
-}
-
 static void BlitSameFormatCKey(Surface dest, Surface src, int x, int y) {
     const PixelFormat* fmt = src.format;
     const int bpp = fmt->bytesPerPixel;
-    const Color key = SurfaceGetColorKey(src);
+    const uint32_t key = ColorToPixel(dest.format, SurfaceGetColorKey(src));
 
     const Rect destRect = { 0, 0, dest.width, dest.height };
     const Rect srcRect = { x, y, src.width, src.height };
@@ -442,9 +438,8 @@ static void BlitSameFormatCKey(Surface dest, Surface src, int x, int y) {
 
         for (int ix = 0; ix < w; ++ix) {
             const uint32_t srcValue = LOAD_PIXEL(srcPx, bpp);
-            const Color c = PixelToColor(fmt, srcValue);
 
-            if (!ColorEqualRGB(c, key)) {
+            if (srcValue != key) {
                 STORE_PIXEL(dstPx, bpp, srcValue);
             }
 
@@ -458,7 +453,7 @@ static void BlitSameFormatCKey(Surface dest, Surface src, int x, int y) {
 }
 
 static void BlitDifferentFormatCKey(Surface dest, Surface src, int x, int y) {
-    const Color key = SurfaceGetColorKey(src);
+    const uint32_t key = ColorToPixel(src.format, SurfaceGetColorKey(src));
 
     const Rect destRect = { 0, 0, dest.width, dest.height };
     const Rect srcRect = { x, y, src.width, src.height };
@@ -481,10 +476,9 @@ static void BlitDifferentFormatCKey(Surface dest, Surface src, int x, int y) {
 
         for (int ix = 0; ix < w; ++ix) {
             const uint32_t srcVal = LOAD_PIXEL(srcPx, srcBpp);
-            const Color srcColor = PixelToColor(src.format, srcVal);
 
-            if (!ColorEqualRGB(srcColor, key)) {
-                const uint32_t out = ColorToPixel(dest.format, srcColor);
+            if (srcVal != key) {
+                const uint32_t out = ConvertPixel(srcVal, src.format, dest.format);
                 STORE_PIXEL(dstPx, destBpp, out);
             }
 
