@@ -47,7 +47,7 @@ Surface SurfaceCreateFromBuffer(int width, int height, const PixelFormat* format
     if (format->aMask != 0) {
         // analyze buffer to set proper flags
         for (int i = 0; i < width * height; ++i) {
-            // for now, only 4-byte pixel format with alpha is suppoerted, so uint32_t can be safely used
+            // for now, only 4-byte pixel format with alpha is supported, so uint32_t can be safely used
             const uint32_t pixel = ((uint32_t*)buffer)[i];
             const Color pixelColor = PixelToColor(format, pixel);
             if (pixelColor.a < 255) {
@@ -58,6 +58,29 @@ Surface SurfaceCreateFromBuffer(int width, int height, const PixelFormat* format
     }
 
     return (Surface){ width, height, buffer, stride, flags, format };
+}
+
+Surface SurfaceGetSubsurface(Surface surface, Rect rect) {
+    if (surface.pixels == NULL) {
+        THROW_ERROR(ERR_INVALID_PARAMS);
+        return (Surface){ 0 };
+    }
+
+    const int x = (rect.x > 0 && rect.x < surface.width) ? rect.x : 0;
+    const int y = (rect.y > 0 && rect.y < surface.height) ? rect.y : 0;
+    const int w = (rect.width > 0 && rect.width <= surface.width) ? rect.width : 0;
+    const int h = (rect.height > 0 && rect.height <= surface.height) ? rect.height : 0;
+
+    uint8_t* pixels = surface.pixels + y * surface.stride + x * surface.format->bytesPerPixel;
+    const SurfaceFlags flags = surface.flags | SURFACE_FLAG_PREALLOCATED;
+
+    return (Surface){ w, h, pixels, surface.stride, flags, surface.format };
+}
+
+Surface SurfaceGetSubsurfaceUnchecked(Surface surface, Rect rect) {
+    uint8_t* pixels = surface.pixels + rect.y * surface.stride + rect.x * surface.format->bytesPerPixel;
+    const SurfaceFlags flags = surface.flags | SURFACE_FLAG_PREALLOCATED;
+    return (Surface){ rect.width, rect.height, pixels, surface.stride, flags, surface.format };
 }
 
 void SurfaceDestroy(Surface* surface) {

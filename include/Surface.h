@@ -2,6 +2,7 @@
 #define LGL_SURFACE_H
 
 #include "PixelFormat.h"
+#include "Rect.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,6 +26,8 @@ typedef struct Surface {
 
 Surface SurfaceCreate(int width, int height, const PixelFormat* format);
 Surface SurfaceCreateFromBuffer(int width, int height, const PixelFormat* format, void* buffer);
+Surface SurfaceGetSubsurface(Surface surface, Rect rect);
+Surface SurfaceGetSubsurfaceUnchecked(Surface surface, Rect rect);
 void SurfaceDestroy(Surface* surface);
 Surface SurfaceCopy(Surface src);
 Surface SurfaceConvert(Surface surface, const PixelFormat* format);
