@@ -77,7 +77,7 @@ Surface SurfaceCopy(Surface src) {
     return copy;
 }
 
-static void BlitDifferentFormat(Surface dest, Surface src, int x, int y);
+static void BlitDifferentFormat(Surface dest, Surface src, int x, int y, Rect clipped);
 
 Surface SurfaceConvert(Surface surface, const PixelFormat* format) {
     if (surface.pixels == NULL || surface.format == NULL || format == NULL) {
@@ -96,7 +96,7 @@ Surface SurfaceConvert(Surface surface, const PixelFormat* format) {
 
     // Blit can convert formats on the fly, so it is used here to avoid code duplication
     // However, this exact variant is used here to avoid any skipping or blending, just raw blit with conversion
-    BlitDifferentFormat(converted, surface, 0, 0);
+    BlitDifferentFormat(converted, surface, 0, 0, (Rect){ 0, 0, surface.width, surface.height });
 
     if (surface.flags & SURFACE_FLAG_HAS_COLOR_KEY) {
         converted.flags |= SURFACE_FLAG_HAS_COLOR_KEY;
@@ -119,13 +119,8 @@ void SurfaceFill(Surface surface, Color color) {
     }
 }
 
-static void BlitSameFormat(Surface dest, Surface src, int x, int y) {
+static void BlitSameFormat(Surface dest, Surface src, int x, int y, Rect clipped) {
     const int bpp = src.format->bytesPerPixel;
-
-    const Rect destRect = { 0, 0, dest.width, dest.height };
-    const Rect srcRect = { x, y, src.width, src.height };
-    Rect clipped;
-    if (!RectIntersection(&srcRect, &destRect, &clipped)) return;
 
     int h = clipped.height;
     const int w = clipped.width * bpp;
@@ -217,14 +212,8 @@ static inline void BlendRGBA_SSE2(
     *oa = _mm_add_epi32(sa, _mm_srli_epi32(da_m, 8));
 }
 
-static void BlitSameFormatA_SSE2(Surface dest, Surface src, int x, int y) {
+static void BlitSameFormatA_SSE2(Surface dest, Surface src, int x, int y, Rect clipped) {
     const PixelFormat* fmt = dest.format;
-
-    const Rect destRect = { 0, 0, dest.width, dest.height };
-    const Rect srcRect  = { x, y, src.width, src.height };
-    Rect clipped;
-
-    if (!RectIntersection(&srcRect, &destRect, &clipped)) return;
 
     uint8_t* dstRow = (uint8_t*)dest.pixels + clipped.y * dest.stride + (clipped.x << 2);
     const uint8_t* srcRow = (uint8_t*)src.pixels + (clipped.y - y) * src.stride + ((clipped.x - x) << 2);
@@ -275,13 +264,8 @@ static void BlitSameFormatA_SSE2(Surface dest, Surface src, int x, int y) {
 #else
 
 // for now, LGL blitting supports ONLY 4-byte colors with alpha channel
-static void BlitSameFormatA(Surface dest, Surface src, int x, int y) {
+static void BlitSameFormatA(Surface dest, Surface src, int x, int y, Rect clipped) {
     const PixelFormat* fmt = dest.format;
-
-    const Rect destRect = { 0, 0, dest.width, dest.height };
-    const Rect srcRect = { x, y, src.width, src.height };
-    Rect clipped;
-    if (!RectIntersection(&srcRect, &destRect, &clipped)) return;
 
     const int h = clipped.height;
     const int w = clipped.width;
@@ -332,15 +316,9 @@ static void BlitSameFormatA(Surface dest, Surface src, int x, int y) {
         }                                                         \
     } while (0)
 
-static void BlitDifferentFormat(Surface dest, Surface src, int x, int y) {
+static void BlitDifferentFormat(Surface dest, Surface src, int x, int y, Rect clipped) {
     const int srcBpp  = src.format->bytesPerPixel;
     const int destBpp = dest.format->bytesPerPixel;
-
-    const Rect destRect = { 0, 0, dest.width, dest.height };
-    const Rect srcRect  = { x, y, src.width, src.height };
-    Rect clipped;
-
-    if (!RectIntersection(&srcRect, &destRect, &clipped)) return;
 
     const int w = clipped.width;
     const int h = clipped.height;
@@ -370,13 +348,7 @@ static void BlitDifferentFormat(Surface dest, Surface src, int x, int y) {
     }
 }
 
-static void BlitDifferentFormatA(Surface dest, Surface src, int x, int y) {
-    const Rect destRect = { 0, 0, dest.width, dest.height };
-    const Rect srcRect = { x, y, src.width, src.height };
-    Rect clipped;
-
-    if (!RectIntersection(&srcRect, &destRect, &clipped)) return;
-
+static void BlitDifferentFormatA(Surface dest, Surface src, int x, int y, Rect clipped) {
     const int w = clipped.width;
     const int h = clipped.height;
 
@@ -419,16 +391,10 @@ static void BlitDifferentFormatA(Surface dest, Surface src, int x, int y) {
     }
 }
 
-static void BlitSameFormatCKey(Surface dest, Surface src, int x, int y) {
+static void BlitSameFormatCKey(Surface dest, Surface src, int x, int y, Rect clipped) {
     const PixelFormat* fmt = src.format;
     const int bpp = fmt->bytesPerPixel;
     const uint32_t key = ColorToPixel(dest.format, SurfaceGetColorKey(src));
-
-    const Rect destRect = { 0, 0, dest.width, dest.height };
-    const Rect srcRect = { x, y, src.width, src.height };
-    Rect clipped;
-
-    if (!RectIntersection(&srcRect, &destRect, &clipped)) return;
 
     const int w = clipped.width;
     const int h = clipped.height;
@@ -456,14 +422,8 @@ static void BlitSameFormatCKey(Surface dest, Surface src, int x, int y) {
     }
 }
 
-static void BlitDifferentFormatCKey(Surface dest, Surface src, int x, int y) {
+static void BlitDifferentFormatCKey(Surface dest, Surface src, int x, int y, Rect clipped) {
     const uint32_t key = ColorToPixel(src.format, SurfaceGetColorKey(src));
-
-    const Rect destRect = { 0, 0, dest.width, dest.height };
-    const Rect srcRect = { x, y, src.width, src.height };
-    Rect clipped;
-
-    if (!RectIntersection(&srcRect, &destRect, &clipped)) return;
 
     const int w = clipped.width;
     const int h = clipped.height;
@@ -496,25 +456,30 @@ static void BlitDifferentFormatCKey(Surface dest, Surface src, int x, int y) {
 }
 
 void SurfaceBlit(Surface dest, Surface src, int x, int y) {
+    const Rect destRect = { 0, 0, dest.width, dest.height };
+    const Rect srcRect = { x, y, src.width, src.height };
+    Rect clipped;
+    if (!RectIntersection(&srcRect, &destRect, &clipped)) return;
+
     const bool formatsEqual = (src.format == dest.format);
 
     if (src.flags & SURFACE_FLAG_HAS_COLOR_KEY) {
-        if (formatsEqual) BlitSameFormatCKey(dest, src, x, y);
-        else BlitDifferentFormatCKey(dest, src, x, y);
+        if (formatsEqual) BlitSameFormatCKey(dest, src, x, y, clipped);
+        else BlitDifferentFormatCKey(dest, src, x, y, clipped);
     }
     else if (src.flags & SURFACE_FLAG_HAS_ALPHA) {
         if (formatsEqual)
 #ifdef __SSE2__
-            BlitSameFormatA_SSE2(dest, src, x, y);
+            BlitSameFormatA_SSE2(dest, src, x, y, clipped);
 #else
-            BlitSameFormatA(dest, src, x, y);
+            BlitSameFormatA(dest, src, x, y, clipped);
 #endif
         else
-            BlitDifferentFormatA(dest, src, x, y);
+            BlitDifferentFormatA(dest, src, x, y, clipped);
     }
     else {
-        if (formatsEqual) BlitSameFormat(dest, src, x, y);
-        else BlitDifferentFormat(dest, src, x, y);
+        if (formatsEqual) BlitSameFormat(dest, src, x, y, clipped);
+        else BlitDifferentFormat(dest, src, x, y, clipped);
     }
 }
 
