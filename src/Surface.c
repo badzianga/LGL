@@ -1,6 +1,8 @@
-#ifdef __SSE2__
+#if defined(__SSE4_1__)
+#include <smmintrin.h>
+#elif defined(__SSE2__)
 #include <emmintrin.h>
-#endif  // __SSE2__
+#endif
 #include <string.h>
 
 #include "Allocator.h"
@@ -164,7 +166,8 @@ static inline __m128i PackRGBA_SSE2(__m128i r, __m128i g, __m128i b, __m128i a, 
 }
 
 // On SSE4.2 operation _mm_mullo_epi32 is present, but on SSE2 it has to be emulated
-static inline __m128i MulLoEpi32_SSE2(__m128i a, __m128i b) {
+#ifndef __SSE4_1__
+static inline __m128i _mm_mullo_epi32(__m128i a, __m128i b) {
     const __m128i a_lo = _mm_and_si128(a, _mm_set1_epi32(0xFFFF));
     const __m128i b_lo = _mm_and_si128(b, _mm_set1_epi32(0xFFFF));
 
@@ -180,13 +183,14 @@ static inline __m128i MulLoEpi32_SSE2(__m128i a, __m128i b) {
 
     return _mm_add_epi32(lo, _mm_add_epi32(hi, mid));
 }
+#endif  // __SSE4_1__
 
 static inline __m128i BlendChannel_SSE2(__m128i s, __m128i d, __m128i a) {
     const __m128i inv255 = _mm_set1_epi32(255);
     const __m128i ia = _mm_sub_epi32(inv255, a);
 
-    const __m128i sm = MulLoEpi32_SSE2(s, a);
-    const __m128i dm = MulLoEpi32_SSE2(d, ia);
+    const __m128i sm = _mm_mullo_epi32(s, a);
+    const __m128i dm = _mm_mullo_epi32(d, ia);
 
     const __m128i sum = _mm_add_epi32(sm, dm);
 
@@ -205,7 +209,7 @@ static inline void BlendRGBA_SSE2(
     const __m128i inv255 = _mm_set1_epi32(255);
     const __m128i ia = _mm_sub_epi32(inv255, sa);
 
-    const __m128i da_m = MulLoEpi32_SSE2(da, ia);
+    const __m128i da_m = _mm_mullo_epi32(da, ia);
     *oa = _mm_add_epi32(sa, _mm_srli_epi32(da_m, 8));
 }
 
