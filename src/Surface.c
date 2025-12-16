@@ -541,13 +541,15 @@ void SurfaceSetColorKey(Surface* surface, Color color) {
         const uint8_t aShift = fmt->aShift;
 
         uint8_t* row = (uint8_t*)surface->pixels;
+        // surface->stride might not be equal surface->width * 4 when working with subsurface
+        const int stride = surface->width << 2;
 
         for (int y = 0; y < surface->height; ++y) {
             uint32_t* pixel = (uint32_t*)row;
+            const uint32_t* end = (uint32_t*)(row + stride);
 
-            for (int x = 0; x < surface->width; ++x) {
-                uint32_t p = pixel[x];
-
+            while (pixel < end) {
+                const uint32_t p = *pixel;
                 const uint32_t a = (p & aMask) >> aShift;
 
                 if (a != 255) {
@@ -559,13 +561,14 @@ void SurfaceSetColorKey(Surface* surface, Color color) {
                     g = (g * a) / 255;
                     b = (b * a) / 255;
 
-                    p = ((r << rShift) & rMask) |
+                    *pixel =
+                        ((r << rShift) & rMask) |
                         ((g << gShift) & gMask) |
                         ((b << bShift) & bMask) |
                         ((255u << aShift) & aMask);
-
-                    pixel[x] = p;
                 }
+
+                ++pixel;
             }
 
             row += surface->stride;
