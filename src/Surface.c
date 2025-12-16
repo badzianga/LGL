@@ -1,3 +1,6 @@
+#ifdef __SSE2__
+#include <emmintrin.h>
+#endif  // __SSE2__
 #include <string.h>
 
 #include "Allocator.h"
@@ -129,7 +132,140 @@ static void BlitSameFormat(Surface dest, Surface src, int x, int y) {
     }
 }
 
-// for now, LGL supports only 4-byte colors with alpha channel
+#ifdef __SSE2__
+
+static inline void UnpackRGBA_SSE2(__m128i px, const PixelFormat* f, __m128i* r, __m128i* g, __m128i* b, __m128i* a) {
+    const __m128i rm = _mm_set1_epi32((int)(f->rMask));
+    const __m128i gm = _mm_set1_epi32((int)(f->gMask));
+    const __m128i bm = _mm_set1_epi32((int)(f->bMask));
+    const __m128i am = _mm_set1_epi32((int)(f->aMask));
+
+    *r = _mm_and_si128(px, rm);
+    *g = _mm_and_si128(px, gm);
+    *b = _mm_and_si128(px, bm);
+    *a = _mm_and_si128(px, am);
+
+    *r = _mm_srli_epi32(*r, f->rShift);
+    *g = _mm_srli_epi32(*g, f->gShift);
+    *b = _mm_srli_epi32(*b, f->bShift);
+    *a = _mm_srli_epi32(*a, f->aShift);
+}
+
+static inline __m128i PackRGBA_SSE2(__m128i r, __m128i g, __m128i b, __m128i a, const PixelFormat* f) {
+    r = _mm_slli_epi32(r, f->rShift);
+    g = _mm_slli_epi32(g, f->gShift);
+    b = _mm_slli_epi32(b, f->bShift);
+    a = _mm_slli_epi32(a, f->aShift);
+
+    return _mm_or_si128(
+        _mm_or_si128(r, g),
+        _mm_or_si128(b, a)
+    );
+}
+
+// On SSE4.2 operation _mm_mullo_epi32 is present, but on SSE2 it has to be emulated
+static inline __m128i MulLoEpi32_SSE2(__m128i a, __m128i b) {
+    const __m128i a_lo = _mm_and_si128(a, _mm_set1_epi32(0xFFFF));
+    const __m128i b_lo = _mm_and_si128(b, _mm_set1_epi32(0xFFFF));
+
+    const __m128i a_hi = _mm_srli_epi32(a, 16);
+    const __m128i b_hi = _mm_srli_epi32(b, 16);
+
+    const __m128i lo = _mm_mullo_epi16(a_lo, b_lo);
+    __m128i hi = _mm_mullo_epi16(a_hi, b_lo);
+    __m128i mid = _mm_mullo_epi16(a_lo, b_hi);
+
+    hi = _mm_slli_epi32(hi, 16);
+    mid = _mm_slli_epi32(mid, 16);
+
+    return _mm_add_epi32(lo, _mm_add_epi32(hi, mid));
+}
+
+static inline __m128i BlendChannel_SSE2(__m128i s, __m128i d, __m128i a) {
+    const __m128i inv255 = _mm_set1_epi32(255);
+    const __m128i ia = _mm_sub_epi32(inv255, a);
+
+    const __m128i sm = MulLoEpi32_SSE2(s, a);
+    const __m128i dm = MulLoEpi32_SSE2(d, ia);
+
+    const __m128i sum = _mm_add_epi32(sm, dm);
+
+    return _mm_srli_epi32(sum, 8);
+}
+
+static inline void BlendRGBA_SSE2(
+    __m128i sr, __m128i sg, __m128i sb, __m128i sa,
+    __m128i dr, __m128i dg, __m128i db, __m128i da,
+    __m128i* or, __m128i* og, __m128i* ob, __m128i* oa)
+{
+    *or = BlendChannel_SSE2(sr, dr, sa);
+    *og = BlendChannel_SSE2(sg, dg, sa);
+    *ob = BlendChannel_SSE2(sb, db, sa);
+
+    const __m128i inv255 = _mm_set1_epi32(255);
+    const __m128i ia = _mm_sub_epi32(inv255, sa);
+
+    const __m128i da_m = MulLoEpi32_SSE2(da, ia);
+    *oa = _mm_add_epi32(sa, _mm_srli_epi32(da_m, 8));
+}
+
+static void BlitSameFormatA_SSE2(Surface dest, Surface src, int x, int y) {
+    const PixelFormat* fmt = dest.format;
+
+    const Rect destRect = { 0, 0, dest.width, dest.height };
+    const Rect srcRect  = { x, y, src.width, src.height };
+    Rect clipped;
+
+    if (!RectIntersection(&srcRect, &destRect, &clipped)) return;
+
+    uint8_t* dstRow = (uint8_t*)dest.pixels + clipped.y * dest.stride + (clipped.x << 2);
+    const uint8_t* srcRow = (uint8_t*)src.pixels + (clipped.y - y) * src.stride + ((clipped.x - x) << 2);
+
+    for (int iy = 0; iy < clipped.height; ++iy) {
+        uint32_t* d = (uint32_t*)dstRow;
+        const uint32_t* s = (const uint32_t*)srcRow;
+
+        int ix = 0;
+        for (; ix + 3 < clipped.width; ix += 4) {
+            const __m128i srcPx = _mm_loadu_si128((__m128i*)(s + ix));
+            const __m128i dstPx = _mm_loadu_si128((__m128i*)(d + ix));
+
+            __m128i sr, sg, sb, sa, dr, dg, db, da;
+            UnpackRGBA_SSE2(srcPx, fmt, &sr,&sg,&sb,&sa);
+            UnpackRGBA_SSE2(dstPx, fmt, &dr,&dg,&db,&da);
+
+            __m128i rr, rg, rb, ra;
+            BlendRGBA_SSE2(
+                sr, sg, sb, sa,
+                dr, dg, db, da,
+                &rr, &rg, &rb, &ra
+            );
+
+            const __m128i out = PackRGBA_SSE2(rr, rg, rb, ra, fmt);
+            _mm_storeu_si128((__m128i*)(d + ix), out);
+        }
+
+        for (; ix < clipped.width; ++ix) {
+            const Color sc = PixelToColor(fmt, s[ix]);
+            if (!sc.a) continue;
+            if (sc.a == 255) {
+                d[ix] = s[ix];
+            }
+            else {
+                Color dc = PixelToColor(fmt, d[ix]);
+                dc = BlendColors(sc, dc, sc.a, 255 - sc.a);
+                d[ix] = ColorToPixel(fmt, dc);
+            }
+        }
+
+        dstRow += dest.stride;
+        srcRow += src.stride;
+    }
+}
+
+#else
+
+// for now, LGL blitting supports ONLY 4-byte colors with alpha channel
 static void BlitSameFormatA(Surface dest, Surface src, int x, int y) {
     const PixelFormat* fmt = dest.format;
 
@@ -168,6 +304,8 @@ static void BlitSameFormatA(Surface dest, Surface src, int x, int y) {
         srcRow8 += src.stride;
     }
 }
+
+#endif // __SSE2__
 
 static void BlitDifferentFormat(Surface dest, Surface src, int x, int y) {
     const int srcBpp = src.format->bytesPerPixel;
@@ -277,7 +415,11 @@ static void BlitDifferentFormatA(Surface dest, Surface src, int x, int y) {
 void SurfaceBlit(Surface dest, Surface src, int x, int y) {
     if (dest.format == src.format) {
         if (src.flags & SURFACE_FLAG_HAS_ALPHA)
+#ifdef __SSE2__
+            BlitSameFormatA_SSE2(dest, src, x, y);
+#else
             BlitSameFormatA(dest, src, x, y);
+#endif  // __SSE2__
         else
             BlitSameFormat(dest, src, x, y);
     }
