@@ -415,22 +415,108 @@ static void BlitDifferentFormatA(Surface dest, Surface src, int x, int y) {
     }
 }
 
+static inline int ColorEqualRGB(Color a, Color b) {
+    return (a.r == b.r) && (a.g == b.g) && (a.b == b.b);
+}
+
+static void BlitSameFormatCKey(Surface dest, Surface src, int x, int y) {
+    const PixelFormat* fmt = src.format;
+    const int bpp = fmt->bytesPerPixel;
+    const Color key = SurfaceGetColorKey(src);
+
+    const Rect destRect = { 0, 0, dest.width, dest.height };
+    const Rect srcRect = { x, y, src.width, src.height };
+    Rect clipped;
+
+    if (!RectIntersection(&srcRect, &destRect, &clipped)) return;
+
+    const int w = clipped.width;
+    const int h = clipped.height;
+
+    uint8_t* srcRow = (uint8_t*)src.pixels + (clipped.y - y) * src.stride + (clipped.x - x) * bpp;
+    uint8_t* dstRow = (uint8_t*)dest.pixels + clipped.y * dest.stride + clipped.x * bpp;
+
+    for (int iy = 0; iy < h; ++iy) {
+        uint8_t* srcPx = srcRow;
+        uint8_t* dstPx = dstRow;
+
+        for (int ix = 0; ix < w; ++ix) {
+            const uint32_t srcValue = LOAD_PIXEL(srcPx, bpp);
+            const Color c = PixelToColor(fmt, srcValue);
+
+            if (!ColorEqualRGB(c, key)) {
+                STORE_PIXEL(dstPx, bpp, srcValue);
+            }
+
+            srcPx += bpp;
+            dstPx += bpp;
+        }
+
+        srcRow += src.stride;
+        dstRow += dest.stride;
+    }
+}
+
+static void BlitDifferentFormatCKey(Surface dest, Surface src, int x, int y) {
+    const Color key = SurfaceGetColorKey(src);
+
+    const Rect destRect = { 0, 0, dest.width, dest.height };
+    const Rect srcRect = { x, y, src.width, src.height };
+    Rect clipped;
+
+    if (!RectIntersection(&srcRect, &destRect, &clipped)) return;
+
+    const int w = clipped.width;
+    const int h = clipped.height;
+
+    const int srcBpp = src.format->bytesPerPixel;
+    const int destBpp = dest.format->bytesPerPixel;
+
+    uint8_t* srcRow = (uint8_t*)src.pixels + (clipped.y - y) * src.stride + (clipped.x - x) * srcBpp;
+    uint8_t* dstRow = (uint8_t*)dest.pixels + clipped.y * dest.stride + clipped.x * destBpp;
+
+    for (int iy = 0; iy < h; ++iy) {
+        uint8_t* srcPx = srcRow;
+        uint8_t* dstPx = dstRow;
+
+        for (int ix = 0; ix < w; ++ix) {
+            const uint32_t srcVal = LOAD_PIXEL(srcPx, srcBpp);
+            const Color srcColor = PixelToColor(src.format, srcVal);
+
+            if (!ColorEqualRGB(srcColor, key)) {
+                const uint32_t out = ColorToPixel(dest.format, srcColor);
+                STORE_PIXEL(dstPx, destBpp, out);
+            }
+
+            srcPx += srcBpp;
+            dstPx += destBpp;
+        }
+
+        srcRow += src.stride;
+        dstRow += dest.stride;
+    }
+}
+
 void SurfaceBlit(Surface dest, Surface src, int x, int y) {
-    if (dest.format == src.format) {
-        if (src.flags & SURFACE_FLAG_HAS_ALPHA)
+    const bool formatsEqual = (src.format == dest.format);
+
+    if (src.flags & SURFACE_FLAG_HAS_COLOR_KEY) {
+        if (formatsEqual) BlitSameFormatCKey(dest, src, x, y);
+        else BlitDifferentFormatCKey(dest, src, x, y);
+    }
+    else if (src.flags & SURFACE_FLAG_HAS_ALPHA) {
+        if (formatsEqual)
 #ifdef __SSE2__
             BlitSameFormatA_SSE2(dest, src, x, y);
 #else
             BlitSameFormatA(dest, src, x, y);
-#endif  // __SSE2__
+#endif
         else
-            BlitSameFormat(dest, src, x, y);
+            BlitDifferentFormatA(dest, src, x, y);
     }
     else {
-        if (src.flags & SURFACE_FLAG_HAS_ALPHA)
-            BlitDifferentFormatA(dest, src, x, y);
-        else
-            BlitDifferentFormat(dest, src, x, y);
+        if (formatsEqual) BlitSameFormat(dest, src, x, y);
+        else BlitDifferentFormat(dest, src, x, y);
     }
 }
 
@@ -454,7 +540,7 @@ Color SurfaceGetColorKey(Surface surface) {
         .r = (surface.flags & 0xFF000000) >> 24,
         .g = (surface.flags & 0x00FF0000) >> 16,
         .b = (surface.flags & 0x0000FF00) >> 8,
-        .a = 0
+        .a = 255
     };
 }
 
