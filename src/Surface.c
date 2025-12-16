@@ -77,6 +77,8 @@ Surface SurfaceCopy(Surface src) {
     return copy;
 }
 
+static void BlitDifferentFormat(Surface dest, Surface src, int x, int y);
+
 Surface SurfaceConvert(Surface surface, const PixelFormat* format) {
     if (surface.pixels == NULL || surface.format == NULL || format == NULL) {
         THROW_ERROR(ERR_INVALID_PARAMS);
@@ -90,16 +92,18 @@ Surface SurfaceConvert(Surface surface, const PixelFormat* format) {
     }
 
     Surface converted = SurfaceCreate(surface.width, surface.height, format);
-    if (surface.format->aMask != 0 && converted.format->aMask == 0) {
-        // formats with bpp < 4 cannot have alpha channel, so alpha flags should be removed
-        if (converted.flags & SURFACE_FLAG_HAS_ALPHA) {
-            converted.flags &= ~SURFACE_FLAG_HAS_ALPHA;
-        }
-    }
-    converted.flags &= ~SURFACE_FLAG_PREALLOCATED;
+    converted.flags = 0;
 
-    // SurfaceBlit can convert formats on the fly, so it is used here to avoid code duplication
-    SurfaceBlit(converted, surface, 0, 0);
+    // Blit can convert formats on the fly, so it is used here to avoid code duplication
+    // However, this exact variant is used here to avoid any skipping or blending, just raw blit with conversion
+    BlitDifferentFormat(converted, surface, 0, 0);
+
+    if (surface.flags & SURFACE_FLAG_HAS_COLOR_KEY) {
+        converted.flags |= SURFACE_FLAG_HAS_COLOR_KEY;
+    }
+    else if (surface.flags & SURFACE_FLAG_HAS_ALPHA && format->aMask != 0) {
+        converted.flags |= SURFACE_FLAG_HAS_ALPHA;
+    }
 
     return converted;
 }
