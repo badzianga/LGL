@@ -227,7 +227,7 @@ static void BlitSameFormatA_SSE2(Surface dest, Surface src, int x, int y) {
 
     for (int iy = 0; iy < clipped.height; ++iy) {
         uint32_t* d = (uint32_t*)dstRow;
-        const uint32_t* s = (const uint32_t*)srcRow;
+        const uint32_t* s = (uint32_t*)srcRow;
 
         int ix = 0;
         for (; ix + 3 < clipped.width; ix += 4) {
@@ -257,7 +257,8 @@ static void BlitSameFormatA_SSE2(Surface dest, Surface src, int x, int y) {
             }
             else {
                 Color dc = PixelToColor(fmt, d[ix]);
-                dc = BlendColors(sc, dc, sc.a, 255 - sc.a);
+                const int invA = 255 - sc.a;
+                dc = BlendColors(sc, dc, sc.a, invA);
                 d[ix] = ColorToPixel(fmt, dc);
             }
         }
@@ -300,7 +301,8 @@ static void BlitSameFormatA(Surface dest, Surface src, int x, int y) {
             else {
                 const uint32_t dstValue = dstRow[ix];
                 Color dstColor = PixelToColor(fmt, dstValue);
-                dstColor = BlendColors(srcColor, dstColor, srcColor.a, 255 - srcColor.a);
+                const int invA = 255 - srcColor.a;
+                dstColor = BlendColors(srcColor, dstColor, srcColor.a, invA);
                 dstRow[ix] = ColorToPixel(fmt, dstColor);
             }
         }
@@ -339,7 +341,7 @@ static void BlitDifferentFormat(Surface dest, Surface src, int x, int y) {
     const int w = clipped.width;
     const int h = clipped.height;
 
-    const uint8_t* srcRow = (const uint8_t*)src.pixels + (clipped.y - y) * src.stride + (clipped.x - x) * srcBpp;
+    const uint8_t* srcRow = (uint8_t*)src.pixels + (clipped.y - y) * src.stride + (clipped.x - x) * srcBpp;
 
     uint8_t* destRow = (uint8_t*)dest.pixels + clipped.y * dest.stride + clipped.x * destBpp;
 
@@ -359,7 +361,7 @@ static void BlitDifferentFormat(Surface dest, Surface src, int x, int y) {
             destPixel += destBpp;
         }
 
-        srcRow  += src.stride;
+        srcRow += src.stride;
         destRow += dest.stride;
     }
 
