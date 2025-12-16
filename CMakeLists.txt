@@ -35,11 +35,3 @@ if(COMPILER_SUPPORTS_SSE4_1)
     target_compile_options(LGL PRIVATE -msse4.1)
     target_compile_definitions(LGL PRIVATE __SSE4_1__=1)
 endif()
-
-add_executable(Main test.c)
-target_include_directories(Main PUBLIC include)
-target_link_libraries(Main PUBLIC LGL)
-
-add_executable(PerfTest main.c)
-target_include_directories(PerfTest PUBLIC include)
-target_link_libraries(PerfTest PUBLIC LGL)
