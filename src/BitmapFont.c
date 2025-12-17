@@ -365,6 +365,7 @@ void MeasureBitmapFontText(const char* text, const BitmapFont* font, int* outWid
         }
         width += font->charWidth;
     }
+    if (width > maxWidth) maxWidth = width;
 
     if (outWidth) *outWidth = maxWidth;
     if (outHeight) *outHeight = font->charHeight * lines;
