@@ -12,8 +12,20 @@ static const char* GetErrorMessage(ErrCode code) {
 }
 
 #ifdef ESP_PLATFORM
+#include <unistd.h>
+#include <driver/uart.h>
+
+int _write(int fd, const void *buf, size_t count) {
+    if (fd == 1 || fd == 2) {
+        uart_write_bytes(UART_NUM_0, buf, count);
+        return count;
+    }
+}
+    
 void ThrowError(ErrCode code, const char* file, int line) {
-    for (;;)
+    const char* message = GetErrorMessage(code);
+    printf("[ERROR] %s:%d %s\n", file, line, message);
+    for (;;);
 }
 #else
 #include <stdio.h>
