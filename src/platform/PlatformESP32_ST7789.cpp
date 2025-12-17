@@ -19,6 +19,19 @@ typedef struct TimeHandling {
 static Platform platform = { 0 };
 static TimeHandling timeHandling = { 0 };
 
+#ifdef USE_RGB332
+#include "Allocator.h"
+
+static uint16_t RGB332To565LUT[256];
+static uint16_t* tftLineBuffer = NULL;
+
+static void InitRGB332LUT(void) {
+    for (int i = 0; i < 256; ++i) {
+        RGB332To565LUT[i] = ColorToPixel(&FORMAT_RGB565, PixelToColor(&FORMAT_RGB332, i));;
+    }
+}
+#endif
+
 Surface WindowInit(int width, int height, const char* title) {
     (void)title;
     platform.tft = TFT_eSPI();
@@ -27,7 +40,14 @@ Surface WindowInit(int width, int height, const char* title) {
     platform.tft.setSwapBytes(true);  // ESP32 uses little endian, display uses big endian...
     platform.tft.fillScreen(0x0000);
 
+#ifdef USE_RGB332
+    InitRGB332LUT();
+    tftLineBuffer = (uint16_t*)AllocatorAlloc(width * sizeof(uint16_t));
+
+    platform.surface = SurfaceCreate(width, height, &FORMAT_RGB332);
+#else
     platform.surface = SurfaceCreate(width, height, &FORMAT_RGB565);
+#endif
 
     timeHandling.lastFrameUs = timeHandling.startTimeUs = esp_timer_get_time();
 
@@ -73,7 +93,27 @@ static void FrameTick() {
 }
 
 void WindowEndFrame() {
+#ifdef USE_RGB332
+    const int width = platform.surface.width;
+    const int height = platform.surface.height;
+    const int stride = platform.surface.stride;
+
+    uint8_t* pixels = (uint8_t*)platform.surface.pixels;
+
+    for (int y = 0; y < height; ++y) {
+        const uint8_t* pixelIn = pixels + y * stride;
+        const uint8_t* end = pixels + (y + 1) * stride;
+        uint16_t* pixelOut = tftLineBuffer;
+
+        while (pixelIn < end) {
+            *pixelOut++ = RGB332To565LUT[*pixelIn++];
+        }
+
+        platform.tft.pushImage(0, y, platform.surface.width, 1, tftLineBuffer);
+    }
+#else
     platform.tft.pushImage(0, 0, platform.surface.width, platform.surface.height, (uint16_t*)platform.surface.pixels);
+#endif
 
     FrameTick();
 }
