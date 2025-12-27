@@ -18,6 +18,8 @@ typedef struct Allocator {
 void AllocatorSetGlobal(Allocator* allocator);
 Allocator* AllocatorGet();
 
+extern Allocator DEFAULT_ALLOCATOR;
+
 #define AllocatorAlloc(bytes) AllocatorGet()->alloc(bytes, AllocatorGet()->user)
 #define AllocatorFree(ptr) AllocatorGet()->free(ptr, AllocatorGet()->user)
 
