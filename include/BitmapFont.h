@@ -17,8 +17,6 @@ typedef struct BitmapFont {
     int lastChar;
 } BitmapFont;
 
-extern const BitmapFont DEFAULT_BITMAP_FONT;
-
 void DrawCharBitmapFont(Surface surface, int x, int y, char c, const BitmapFont* font, Color color);
 void DrawTextBitmapFont(Surface surface, int x, int y, const char* text, const BitmapFont* font, Color color);
 void MeasureTextBitmapFont(const char* text, const BitmapFont* font, int* outWidth, int* outHeight);

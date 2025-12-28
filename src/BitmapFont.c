@@ -107,7 +107,7 @@ static const uint8_t defaultBitmapFontData[] = {
     0b00000000, 0b00000000, 0b00000000, 0b01100110, 0b11011011, 0b11001100, 0b00000000, 0b00000000,  // ~
 };
 
-const BitmapFont DEFAULT_BITMAP_FONT = {
+static const BitmapFont defaultBitmapFont = {
     .charWidth = 8,
     .charHeight = 8,
     .data = defaultBitmapFontData,
@@ -335,7 +335,8 @@ static void BlendText(Surface surface, int x, int y, const char* text, const Bit
 }
 
 void DrawTextBitmapFont(Surface surface, int x, int y, const char* text, const BitmapFont* font, Color color) {
-    if (text == NULL || color.a == 0) return;
+    if (!color.a) return;
+    if (!font) font = &defaultBitmapFont;
 
     if (color.a == 255) {
         FillText(surface, x, y, text, font, ColorToPixel(surface.format, color));
@@ -346,10 +347,11 @@ void DrawTextBitmapFont(Surface surface, int x, int y, const char* text, const B
 }
 
 void MeasureTextBitmapFont(const char* text, const BitmapFont* font, int* outWidth, int* outHeight) {
-    if (!text || !font || !font->data) {
+    if (!text) {
         THROW_ERROR(ERR_INVALID_PARAMS);
         return;
     }
+    if (!font) font = &defaultBitmapFont;
 
     int width = 0;
     int maxWidth = 0;

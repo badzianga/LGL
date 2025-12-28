@@ -32,15 +32,16 @@ static void FreeWrapper(void* ptr, void* user) {
 }
 #endif
 
-Allocator DEFAULT_ALLOCATOR = {
+static Allocator defaultAllocator = {
     .alloc = MallocWrapper,
     .free = FreeWrapper,
     .user = NULL
 };
 
-static Allocator* globalAlloc = &DEFAULT_ALLOCATOR;
+static Allocator* globalAlloc = &defaultAllocator;
 
 void AllocatorSetGlobal(Allocator* allocator) {
+    if (!allocator) allocator = &defaultAllocator;
     globalAlloc = allocator;
 }
 
