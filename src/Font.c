@@ -3,7 +3,7 @@
 #include FT_FREETYPE_H
 
 #include "Font.h"
-#include "Error.h"
+#include "internal/Error.h"
 #include "internal/Inlines.h"
 
 static FT_Library ftLibrary = NULL;
@@ -131,12 +131,12 @@ static void BlitGlyphToSurface(Surface surface, const FT_Bitmap* bitmap, int dst
     }
 }
 
-void DrawFontChar(Surface surface, int x, int y, char c, const Font* font, Color color) {
+void DrawCharFont(Surface surface, int x, int y, char c, const Font* font, Color color) {
     const char s[2] = { c, '\0' };
-    DrawFontText(surface, x, y, s, font, color);
+    DrawTextFont(surface, x, y, s, font, color);
 }
 
-void DrawFontText(Surface surface, int x, int y, const char* text, const Font* font, Color color) {
+void DrawTextFont(Surface surface, int x, int y, const char* text, const Font* font, Color color) {
     if (text == NULL || color.a == 0) return;
     FT_Face face = font->internal;
     hb_font_t* hbFont = font->hbFont;
@@ -203,7 +203,7 @@ void DrawFontText(Surface surface, int x, int y, const char* text, const Font* f
     hb_buffer_destroy(buf);
 }
 
-void MeasureFontText(const char* text, const Font* font, int* outWidth, int* outHeight) {
+void MeasureTextFont(const char* text, const Font* font, int* outWidth, int* outHeight) {
     if (!text || !font || !font->internal || !font->hbFont) {
         THROW_ERROR(ERR_INVALID_PARAMS);
         return;

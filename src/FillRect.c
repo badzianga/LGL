@@ -2,7 +2,7 @@
 #include <emmintrin.h>
 #endif  // __SSE2__
 
-#include "FillRect.h"
+#include "internal/FillRect.h"
 #include "internal/Inlines.h"
 #include "Rect.h"
 

@@ -7,8 +7,8 @@
 
 #include "Allocator.h"
 #include "Color.h"
-#include "Error.h"
-#include "FillRect.h"
+#include "internal/Error.h"
+#include "internal/FillRect.h"
 #include "internal/Inlines.h"
 #include "PixelFormat.h"
 #include "Surface.h"

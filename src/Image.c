@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "Allocator.h"
-#include "Error.h"
+#include "internal/Error.h"
 #include "Image.h"
 #include "PixelFormat.h"
 

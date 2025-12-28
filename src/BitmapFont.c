@@ -1,5 +1,5 @@
 #include "BitmapFont.h"
-#include "Error.h"
+#include "internal/Error.h"
 #include "internal/Inlines.h"
 #include "PixelFormat.h"
 
@@ -345,7 +345,7 @@ void DrawTextBitmapFont(Surface surface, int x, int y, const char* text, const B
     }
 }
 
-void MeasureBitmapFontText(const char* text, const BitmapFont* font, int* outWidth, int* outHeight) {
+void MeasureTextBitmapFont(const char* text, const BitmapFont* font, int* outWidth, int* outHeight) {
     if (!text || !font || !font->data) {
         THROW_ERROR(ERR_INVALID_PARAMS);
         return;

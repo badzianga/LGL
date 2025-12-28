@@ -1,5 +1,5 @@
 #include "Arena.h"
-#include "Error.h"
+#include "internal/Error.h"
 
 Arena ArenaInit(void* buffer, size_t size) {
     if (buffer == NULL || size == 0) {

@@ -15,9 +15,9 @@ typedef struct Font {
 
 Font FontLoad(const char* path, int pixelSize);
 void FontFree(Font* font);
-void DrawFontChar(Surface surface, int x, int y, char c, const Font* font, Color color);
-void DrawFontText(Surface surface, int x, int y, const char* text, const Font* font, Color color);
-void MeasureFontText(const char* text, const Font* font, int* outWidth, int* outHeight);
+void DrawCharFont(Surface surface, int x, int y, char c, const Font* font, Color color);
+void DrawTextFont(Surface surface, int x, int y, const char* text, const Font* font, Color color);
+void MeasureTextFont(const char* text, const Font* font, int* outWidth, int* outHeight);
 void ShutdownFontModule();
 
 #ifdef __cplusplus

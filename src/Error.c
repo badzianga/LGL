@@ -1,4 +1,4 @@
-#include "Error.h"
+#include "internal/Error.h"
 
 static const char* GetErrorMessage(ErrCode code) {
     switch (code) {

@@ -1,7 +1,7 @@
 #include <stdlib.h>
 
 #include "Draw.h"
-#include "FillRect.h"
+#include "internal/FillRect.h"
 #include "internal/FixedPoint.h"
 #include "internal/Inlines.h"
 
