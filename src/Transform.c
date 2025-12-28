@@ -212,6 +212,8 @@ Surface TransformScale(Surface src, int destWidth, int destHeight) {
 // That's why B/D/E/F/H calculations can't be performed with array indexing.
 // However, dst surface is a new surface created by TransformScale, so (src.width * bpp == src.stride).
 // Thanks to this, is dstPixels array indexing can be used.
+#ifndef DONT_USE_SCALE2X
+
 #define MAKE_SCALE2X_FUNCTION(TYPE, BYTES)                                                             \
 static void Scale2x##BYTES(Surface src, Surface dst) {                                                 \
     const int lastSrcRow = src.height - 1;                                                             \
@@ -269,3 +271,11 @@ Surface TransformScale2x(Surface original) {
     }
     return scaled;
 }
+
+#else
+
+Surface TransformScale2x(Surface original) {
+    return TransformScale(original, original.width << 1, original.height << 1);
+}
+
+#endif
