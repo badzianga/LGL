@@ -21,10 +21,15 @@ static void FillHLine(Surface surface, int y, int x0, int x1, uint32_t color) {
 
     if (x0 < 0) x0 = 0;
     if (x1 > surface.width) x1 = surface.width;
-    if (x0 >= x1) return;
+    if (x0 > x1) {
+        const int t = x0;
+        x0 = x1;
+        x1 = t;
+    }
 
     const int bpp = surface.format->bytesPerPixel;
     const int w = x1 - x0;
+    if (w == 0) return;
 
     uint8_t* row = (uint8_t*)surface.pixels + y * surface.stride + x0 * bpp;
 
@@ -63,7 +68,11 @@ static void BlendFillHLine(Surface surface, int y, int x0, int x1, Color color) 
 
     if (x0 < 0) x0 = 0;
     if (x1 > surface.width) x1 = surface.width;
-    if (x0 >= x1) return;
+    if (x0 > x1) {
+        const int t = x0;
+        x0 = x1;
+        x1 = t;
+    }
 
     const uint8_t bpp = surface.format->bytesPerPixel;
     const uint8_t a = color.a;
