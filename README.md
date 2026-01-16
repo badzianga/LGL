@@ -2,7 +2,7 @@
 
 LGL (Lite Graphics Library) is a graphics library written in C based on software rendering, designed for PC and ESP32 microcontrollers.
 
-# Build instructions
+## Build instructions
 
 The project can be built using CMake and is dependent on `Freetype` and `harfbuzz` libraries (make sure to have them on your system).
 
@@ -12,7 +12,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build .
 ```
 
-# Example - PC
+## Example - PC
 
 This code below draws a "Hello, world!" text and displays it on the screen.
 
